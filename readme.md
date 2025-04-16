@@ -38,11 +38,15 @@ https://github.com/NickoDante/AI4Devs-finalproject
 
 ## 1. Descripción general del producto
 
-TG: The Guardian es un chatbot corporativo inteligente diseñado específicamente para Teravision Games, que se integra seamlessly con Slack y Confluence para proporcionar acceso rápido y eficiente al conocimiento y la documentación interna de la empresa. Representado por la icónica mascota de múltiples ojos de la compañía, este asistente virtual aprovecha tecnologías de procesamiento de lenguaje natural para entender consultas conversacionales, localizar información relevante, y presentarla de manera estructurada y accesible. El sistema actúa como intermediario entre los empleados y la base de documentación corporativa, eliminando la necesidad de navegar manualmente a través de múltiples páginas de Confluence para encontrar información específica. The Guardian también puede resumir documentos extensos, responder preguntas administrativas frecuentes, y está diseñado para crecer en capacidades a medida que comprende mejor el contexto único de Teravision Games y sus procesos internos.
+TG: The Guardian es un chatbot corporativo inteligente diseñado específicamente para Teravision Games, que se integra seamlessly con Slack y Confluence para proporcionar acceso rápido y eficiente al conocimiento y la documentación interna de la empresa. Representado por la icónica mascota de múltiples ojos de la compañía, este asistente virtual aprovecha tecnologías de procesamiento de lenguaje natural para entender consultas conversacionales, localizar información relevante, y presentarla de manera estructurada y accesible. 
+
+El sistema actúa como intermediario entre los empleados y la base de documentación corporativa, eliminando la necesidad de navegar manualmente a través de múltiples páginas de Confluence para encontrar información específica. The Guardian también puede resumir documentos extensos, responder preguntas administrativas frecuentes, y está diseñado para crecer en capacidades a medida que comprende mejor el contexto único de Teravision Games y sus procesos internos.
 
 ### **1.1. Objetivo:**
 
-El propósito principal de TG: The Guardian es optimizar el acceso al conocimiento y la documentación interna para los empleados de Teravision Games, reduciendo significativamente el tiempo dedicado a buscar información y aumentando la productividad general del equipo. El producto soluciona el problema fundamental de la información dispersa y de difícil acceso, permitiendo a los desarrolladores, diseñadores, artistas, productores y personal administrativo concentrarse en sus tareas principales en lugar de perder tiempo navegando por repositorios de documentación. Al democratizar el acceso al conocimiento interno mediante una interfaz conversacional en Slack (plataforma que el equipo ya utiliza diariamente), The Guardian elimina barreras tecnológicas y crea un entorno donde la información fluye libremente, beneficiando especialmente a los nuevos empleados y a equipos multidisciplinarios que necesitan acceder rápidamente a documentación fuera de su área de especialización.
+El propósito principal de TG: The Guardian es optimizar el acceso al conocimiento y la documentación interna para los empleados de Teravision Games, reduciendo significativamente el tiempo dedicado a buscar información y aumentando la productividad general del equipo. El producto soluciona el problema fundamental de la información dispersa y de difícil acceso, permitiendo a los desarrolladores, diseñadores, artistas, productores y personal administrativo concentrarse en sus tareas principales en lugar de perder tiempo navegando por repositorios de documentación. 
+
+Al democratizar el acceso al conocimiento interno mediante una interfaz conversacional en Slack (plataforma que el equipo ya utiliza diariamente), The Guardian elimina barreras tecnológicas y crea un entorno donde la información fluye libremente, beneficiando especialmente a los nuevos empleados y a equipos multidisciplinarios que necesitan acceder rápidamente a documentación fuera de su área de especialización.
 
 ### **1.2. Características y funcionalidades principales:**
 
@@ -62,8 +66,8 @@ Esta característica permite a los miembros del equipo obtener rápidamente la e
 
 ### **1.4. Instrucciones de instalación:**
 
-<!-- Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.) -->
-<!-- 28 - Abril - 2025 ** -->
+<!-- Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
+** 28 - Abril - 2025 ** -->
 
 ---
 
@@ -138,6 +142,7 @@ En la arquitectura hexagonal para TG: The Guardian:
 4. **Indirección**: El código puede ser algo más verboso debido a las capas de abstracción adicionales.
 
 ### Diagrama en Mermaid
+```
 graph TD
   %% Dominio Central
   subgraph Dominio Central
@@ -195,36 +200,36 @@ graph TD
   AdapterMongo --> MongoDB
   AdapterRedis --> Redis
   AdapterVectorDB --> VectorDB
-
+```
 ### **2.2. Descripción de componentes principales:**
 
-| Nivel Arquitectónico | Componente                      | Rol Clave                                                                 | Tecnología                         | Importancia del Nivel                                                                 |
+| Nivel Arquitectónico | Componente                       | Rol Clave                                                                 | Tecnología                         | Importancia del Nivel                                                                  |
 |----------------------|----------------------------------|---------------------------------------------------------------------------|------------------------------------|----------------------------------------------------------------------------------------|
 | Dominio Central      | CoreLogic (Lógica Central)       | Interpreta intenciones y decide flujo de ejecución                        | Node.js (TypeScript preferido)     | ⭐⭐⭐⭐⭐ Vital: es el cerebro del sistema, contiene la lógica de negocio central         |
 |                      | QueryHandler                     | Orquestador de procesos, llama a puertos según necesidad de la consulta   | Node.js                            | ⭐⭐⭐⭐ Es el puente entre el dominio y los puertos, clave para mantener la cohesión     |
 |                      | Entidades + Value Objects        | Representan conceptos del negocio (consultas, respuestas, etc.)           | Node.js / TypeScript               | ⭐⭐⭐ Refuerzan la estructura y legibilidad del dominio                                 |
-
+|----------------------|----------------------------------|---------------------------------------------------------------------------|------------------------------------|----------------------------------------------------------------------------------------|
 | Puertos              | Puerto de Mensajería             | Interface para recibir y enviar mensajes de Slack                         | Interface en TypeScript            | ⭐⭐⭐⭐ Abstracción crucial para independencia de la plataforma de mensajería            |
 |                      | Puerto de Documentación          | Interface para buscar y extraer datos desde Confluence                    | Interface en TypeScript            | ⭐⭐⭐⭐ Permite acceder al conocimiento base del sistema                                 |
 |                      | Puerto de Procesamiento LLM      | Interface para generar resúmenes y entender lenguaje natural              | Interface en TypeScript            | ⭐⭐⭐⭐⭐ Esencial: sin LLM, se pierde el valor cognitivo del asistente                   |
 |                      | Puerto de Persistencia           | Interface para leer/escribir datos en base de datos y cache               | Interface en TypeScript            | ⭐⭐⭐ Necesario para el estado, logs y configuraciones                                  |
-
+|----------------------|----------------------------------|---------------------------------------------------------------------------|------------------------------------|----------------------------------------------------------------------------------------|
 | Adaptadores          | Adaptador Slack API              | Conecta con Slack y formatea la información                               | Slack API + Bolt.js (Node SDK)     | ⭐⭐⭐⭐ Permite la interfaz conversacional base del sistema                              |
 |                      | Adaptador Confluence API         | Llama a la API de Confluence para extraer contenido                       | Confluence REST API + Axios        | ⭐⭐⭐⭐ Vital para encontrar y extraer documentación real                                |
-|                      | Adaptador OpenAI / Claude        | Comunicación con el modelo LLM para NLP                                   | OpenAI SDK / Claude API            | ⭐⭐⭐⭐⭐ Habilita la inteligencia conversacional                                          |
+|                      | Adaptador OpenAI / Claude        | Comunicación con el modelo LLM para NLP                                   | OpenAI SDK / Claude API            | ⭐⭐⭐⭐⭐ Habilita la inteligencia conversacional                                         |
 |                      | Adaptador MongoDB                | Almacena configuraciones, logs, y estructura básica                       | MongoDB + Mongoose                 | ⭐⭐⭐ Base de datos principal del sistema                                                |
 |                      | Adaptador Redis                  | Cache para respuestas frecuentes                                          | Redis + ioredis (Node)             | ⭐⭐⭐ Mejora el rendimiento general del bot                                              |
-|                      | Adaptador Pinecone / Weaviate    | Búsqueda semántica en documentos                                          | Pinecone SDK / Weaviate API        | ⭐⭐⭐⭐ Clave para encontrar contenido relevante basado en intención                      |
-
-| Interfaces Externas  | Slack                            | Punto de entrada del usuario                                              | Plataforma externa                  | ⭐⭐⭐⭐⭐ Sin Slack, no hay canal de entrada                                                |
-|                      | Confluence                       | Fuente de documentación corporativa                                       | Plataforma externa                  | ⭐⭐⭐⭐⭐ Contenedor del conocimiento empresarial                                           |
-|                      | OpenAI / Claude / Llama          | Inteligencia para comprender preguntas y generar respuestas               | Plataforma externa                  | ⭐⭐⭐⭐⭐ Núcleo de comprensión semántica                                                   |
-|                      | MongoDB						  | Infraestructura para persistencia y rendimiento                           | Plataforma externa                  | ⭐⭐⭐ Apoyo técnico para la estabilidad y velocidad del sistema                          |
-
+|                      | Adaptador Pinecone / Weaviate    | Búsqueda semántica en documentos                                          | Pinecone SDK / Weaviate API        | ⭐⭐⭐⭐ Clave para encontrar contenido relevante basado en intención                     |
+|----------------------|----------------------------------|---------------------------------------------------------------------------|------------------------------------|----------------------------------------------------------------------------------------|
+| Interfaces Externas  | Slack                            | Punto de entrada del usuario                                              | Plataforma externa                  | ⭐⭐⭐⭐⭐ Sin Slack, no hay canal de entrada                                             |
+|                      | Confluence                       | Fuente de documentación corporativa                                       | Plataforma externa                  | ⭐⭐⭐⭐⭐ Contenedor del conocimiento empresarial                                        |
+|                      | OpenAI / Claude / Llama          | Inteligencia para comprender preguntas y generar respuestas               | Plataforma externa                  | ⭐⭐⭐⭐⭐ Núcleo de comprensión semántica                                                |
+|                      | MongoDB						  | Infraestructura para persistencia y rendimiento                           | Plataforma externa                  | ⭐⭐⭐ Apoyo técnico para la estabilidad y velocidad del sistema                         |
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
 #### Estructura de Ficheros
+```
 tg-the-guardian/
 ├── src/
 │   ├── domain/                 # Núcleo del sistema (negocio puro, sin dependencias externas)
@@ -266,16 +271,19 @@ tg-the-guardian/
 ├── docker-compose.yml          # Orquestación de contenedores
 ├── package.json
 └── README.md
+```
 
 #### Explicacion por nivel
-Carpeta 		| Pertenece a 		| Rol clave 									| Relación con arquitectura hexagonal
-domain/ 		| Núcleo 			| Define el negocio: entidades, lógica, puertos | ✅ Dominio puro, independiente de frameworks
-application/ 	| Núcleo 			| Orquesta los casos de uso 					| ✅ Casos de uso conectan puertos sin acoplarse a adaptadores
-adapters/ 		| Infraestructura 	| Implementaciones concretas de puertos 		| ✅ Adaptadores conectan con tecnologías específicas
-interfaces/ 	| Entrada 			| Interfaz que el usuario usa (Slack, Web) 		| ✅ Entrada/salida que interactúa con adaptadores
-infrastructure/ | Infraestructura 	| Configuración, DI, entorno de ejecución 		| ✅ Configura cómo se unen todos los componentes
-shared/ 		| Compartido 		| Tipos globales, errores y constantes 			| ✅ Reutilizable sin acoplarse a otras capas
-tests/ 			| Transversal 		| Verifica funcionalidad de cada componente 	| ✅ Ideal para pruebas aisladas gracias a la separación hexagonal
+
+|Carpeta 		| Pertenece a 		| Rol clave 									| Relación con arquitectura hexagonal
+|---------------|-------------------|-----------------------------------------------|-------------------------------------------------------------------|
+|domain/ 		| Núcleo 			| Define el negocio: entidades, lógica, puertos | ✅ Dominio puro, independiente de frameworks						|
+|application/ 	| Núcleo 			| Orquesta los casos de uso 					| ✅ Casos de uso conectan puertos sin acoplarse a adaptadores		|
+|adapters/ 		| Infraestructura 	| Implementaciones concretas de puertos 		| ✅ Adaptadores conectan con tecnologías específicas				|
+|interfaces/ 	| Entrada 			| Interfaz que el usuario usa (Slack, Web) 		| ✅ Entrada/salida que interactúa con adaptadores					|
+|infrastructure/| Infraestructura 	| Configuración, DI, entorno de ejecución 		| ✅ Configura cómo se unen todos los componentes					|
+|shared/ 		| Compartido 		| Tipos globales, errores y constantes 			| ✅ Reutilizable sin acoplarse a otras capas						|
+|tests/ 		| Transversal 		| Verifica funcionalidad de cada componente 	| ✅ Ideal para pruebas aisladas gracias a la separación hexagonal	|
 
 Esta estructura permite:
 * Claridad de responsabilidades: Cada carpeta cumple un propósito único.
@@ -501,7 +509,7 @@ export OPENAI_API_KEY=sk-xxxxxxxxxxxx
 
 ### **2.6. Tests**
 
-<!--> Describe brevemente algunos de los tests realizados
+<!-- Describe brevemente algunos de los tests realizados
 ** 28 - Abril - 2025 **-->
 
 ---
@@ -919,7 +927,7 @@ Reforzar con sugerencias del sistema según el rol del usuario.
 - Resumen de onboarding  
 - Procesos internos y estructura del equipo
 
-#### [Respuestas] Como un empleado nuevo, quiero saber cómo solicitar vacaciones para planificar mi primer viaje personal sin errores.
+### [Respuestas] Como un empleado nuevo, quiero saber cómo solicitar vacaciones para planificar mi primer viaje personal sin errores.
 
 **Descripción:**  
 Reducir la carga en el equipo de RR.HH. proporcionando respuestas automatizadas sobre procedimientos de vacaciones.
@@ -936,7 +944,7 @@ El proceso debe reflejar posibles aprobaciones jerárquicas si aplica.
 - Certificados laborales  
 - Días de permiso
 
-#### [Resumen] Como un desarrollador, quiero obtener un resumen del documento de arquitectura del sistema para entenderlo sin leerlo completo.
+### [Resumen] Como un desarrollador, quiero obtener un resumen del documento de arquitectura del sistema para entenderlo sin leerlo completo.
 
 **Descripción:**  
 Reducir el tiempo de lectura de documentos técnicos extensos mediante resúmenes generados por el bot.
@@ -957,7 +965,7 @@ Permitir expandir el resumen con un comando adicional (“+ detalles”).
 
 ## 6. Tickets de Trabajo
 
-#### 1. [BACKEND] Endpoint para respuestas administrativas sobre vacaciones
+### 1. [BACKEND] Endpoint para respuestas administrativas sobre vacaciones
 
 **Descripción:**  
 Implementar un endpoint que procese consultas relacionadas con la solicitud de vacaciones, identifique la intención y devuelva la respuesta oficial desde la base de conocimiento.
@@ -981,7 +989,7 @@ Implementar un endpoint que procese consultas relacionadas con la solicitud de v
 **Etiquetas:** backend, vacaciones, admin, MVP  
 **Comentarios y notas:** Reutilizable para otras respuestas administrativas (ej: certificados, licencias).
 
-#### 2. [FRONTEND] Mostrar pasos para solicitud de vacaciones en Slack
+### 2. [FRONTEND] Mostrar pasos para solicitud de vacaciones en Slack
 
 **Descripción:**  
 Formatear la respuesta sobre vacaciones para Slack utilizando bloques visuales (pasos, botón al formulario, resumen claro).
@@ -1004,7 +1012,7 @@ Formatear la respuesta sobre vacaciones para Slack utilizando bloques visuales (
 **Etiquetas:** frontend, slack, ux, vacaciones  
 **Comentarios y notas:** Validar con alguien de RR.HH. si el lenguaje es apropiado.
 
-#### 3. [BASE DE DATOS] Ingresar documento de proceso de vacaciones en MongoDB
+### 3. [BASE DE DATOS] Ingresar documento de proceso de vacaciones en MongoDB
 
 **Descripción:**  
 Registrar un documento oficial con los pasos para solicitud de vacaciones, formateado con metadatos y lista para búsquedas.
@@ -1034,7 +1042,7 @@ Registrar un documento oficial con los pasos para solicitud de vacaciones, forma
 
 ## 7. Pull Requests
 
-<!--> Documenta 3 de las Pull Requests realizadas durante la ejecución del proyecto
+<!-- Documenta 3 de las Pull Requests realizadas durante la ejecución del proyecto
 ** 28 - Abril - 2025 **-->
 **Pull Request 1**
 

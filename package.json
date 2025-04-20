@@ -5,9 +5,15 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules --exit-child --poll --clear --notify=false src/index.ts",
+    "dev:docker": "docker-compose up",
     "build": "tsc",
+    "build:clean": "rm -rf dist && tsc",
     "test": "jest",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
   },

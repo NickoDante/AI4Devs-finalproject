@@ -1,7 +1,8 @@
 import express from 'express';
-import { SlackAdapter } from '../../adapters/slack/SlackAdapter';
+import { App } from '@slack/bolt';
+import { registerCommands } from '../../interfaces/slack/commands';
 
-export async function startServer() {
+export const startServer = async () => {
   const app = express();
   const port = Number(process.env.PORT) || 3000;
 
@@ -9,8 +10,14 @@ export async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Inicializar Slack Bot
-  const slackAdapter = new SlackAdapter();
+  // Configuración del bot de Slack
+  const slackApp = new App({
+    token: process.env.SLACK_BOT_TOKEN,
+    signingSecret: process.env.SLACK_SIGNING_SECRET
+  });
+
+  // Registrar comandos
+  registerCommands(slackApp);
 
   // Middleware de error global
   app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -23,8 +30,9 @@ export async function startServer() {
     console.log(`🚀 Servidor Express corriendo en el puerto ${port}`);
   });
 
-  // Iniciar Slack App
-  await slackAdapter.start(port);
+  // Iniciar el bot de Slack
+  await slackApp.start(port);
+  console.log('⚡️ Slack Bot iniciado en el puerto', port);
 
-  return { app, slackAdapter };
-} 
+  return app;
+}; 

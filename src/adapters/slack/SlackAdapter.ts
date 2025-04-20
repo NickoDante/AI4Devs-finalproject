@@ -12,22 +12,22 @@ interface SlackMessageEvent {
 }
 
 export class SlackAdapter implements MessagePort {
-  private app: App;
+  private app: App | null = null;
 
-  constructor() {
-    this.app = new App({
-      token: process.env.SLACK_BOT_TOKEN,
-      signingSecret: process.env.SLACK_SIGNING_SECRET,
-      logLevel: LogLevel.DEBUG
-    });
+  constructor() {}
 
-    this.initializeEventListeners();
-    this.initializeCommands();
+  private assertAppInitialized(): void {
+    if (!this.app) {
+      throw new Error('Slack app not initialized');
+    }
   }
 
   private initializeEventListeners(): void {
+    this.assertAppInitialized();
+    const app = this.app!; // TypeScript now knows app is not null
+
     // Escuchar mensajes directos
-    this.app.message(async ({ message, say, client }) => {
+    app.message(async ({ message, say, client }) => {
       try {
         const slackMessage = message as SlackMessageEvent;
         if (!slackMessage.user || !slackMessage.text) {
@@ -50,12 +50,15 @@ export class SlackAdapter implements MessagePort {
         await say(this.formatResponse(botResponse));
       } catch (error) {
         console.error('Error processing direct message:', error);
-        await say('Lo siento, ocurrió un error al procesar tu mensaje.');
+        await say({
+          text: 'Lo siento, ocurrió un error al procesar tu mensaje.',
+          thread_ts: message.ts
+        });
       }
     });
 
     // Escuchar menciones al bot
-    this.app.event('app_mention', async ({ event, say, client }) => {
+    app.event('app_mention', async ({ event, say, client }) => {
       try {
         if (!event.user || !event.text) {
           console.warn('Mención recibida sin usuario o texto');
@@ -83,17 +86,17 @@ export class SlackAdapter implements MessagePort {
   }
 
   private initializeCommands(): void {
+    this.assertAppInitialized();
+    const app = this.app!;
+
     // Comando de búsqueda
-    this.app.command('/tg-search', async ({ command, ack, respond, client }) => {
+    app.command('/tg-search', async ({ command, ack, respond }) => {
       await ack();
       try {
-        const userInfo = await client.users.info({ user: command.user_id });
-        const username = userInfo.user?.real_name || userInfo.user?.name || 'Unknown User';
-
         const botResponse = await this.processMessage({
           content: command.text,
           userId: command.user_id,
-          username,
+          username: command.user_name,
           channel: command.channel_id,
           timestamp: new Date(),
           type: 'command',
@@ -108,7 +111,7 @@ export class SlackAdapter implements MessagePort {
     });
 
     // Comando de consulta administrativa
-    this.app.command('/tg-admin', async ({ command, ack, respond, client }) => {
+    app.command('/tg-admin', async ({ command, ack, respond, client }) => {
       await ack();
       try {
         const userInfo = await client.users.info({ user: command.user_id });
@@ -132,7 +135,7 @@ export class SlackAdapter implements MessagePort {
     });
 
     // Comando de resumen
-    this.app.command('/tg-summary', async ({ command, ack, respond, client }) => {
+    app.command('/tg-summary', async ({ command, ack, respond, client }) => {
       await ack();
       try {
         const userInfo = await client.users.info({ user: command.user_id });
@@ -190,7 +193,10 @@ export class SlackAdapter implements MessagePort {
       });
     }
 
-    return { blocks };
+    return {
+      blocks,
+      thread_ts: response.threadId
+    };
   }
 
   async processMessage(message: Message): Promise<BotResponse> {
@@ -202,8 +208,9 @@ export class SlackAdapter implements MessagePort {
   }
 
   async sendMessage(channel: string, text: string): Promise<void> {
+    this.assertAppInitialized();
     try {
-      await this.app.client.chat.postMessage({
+      await this.app!.client.chat.postMessage({
         channel,
         text
       });
@@ -214,6 +221,19 @@ export class SlackAdapter implements MessagePort {
   }
 
   async start(port: number): Promise<void> {
+    if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_SIGNING_SECRET) {
+      throw new Error('SLACK_BOT_TOKEN and SLACK_SIGNING_SECRET must be set in environment variables');
+    }
+
+    this.app = new App({
+      token: process.env.SLACK_BOT_TOKEN,
+      signingSecret: process.env.SLACK_SIGNING_SECRET,
+      logLevel: LogLevel.DEBUG
+    });
+
+    this.initializeEventListeners();
+    this.initializeCommands();
+
     await this.app.start(port);
     console.log('⚡️ Slack Bolt app está corriendo!');
   }

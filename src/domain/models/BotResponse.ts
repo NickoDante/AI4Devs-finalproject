@@ -11,7 +11,7 @@ export interface BotResponse {
   metadata?: {
     source?: string;
     confidence?: number;
-    error?: string;
+    error?: string | boolean;
     actionType?: string;
     actionData?: any;
     [key: string]: any;

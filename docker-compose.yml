@@ -2,10 +2,10 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
       - NODE_ENV=development
-      - PORT=3000
+      - PORT=3001
       - MONGODB_URI=mongodb://mongodb:27017/tg-guardian
       - REDIS_URL=redis://redis:6379
     depends_on:
@@ -15,7 +15,11 @@ services:
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./tsconfig.json:/app/tsconfig.json
+      - ./.env:/app/.env
     command: npm run dev
+    stop_signal: SIGINT
+    restart: "no"
+    init: true
 
   mongodb:
     image: mongo:latest

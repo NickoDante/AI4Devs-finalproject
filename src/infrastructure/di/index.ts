@@ -1,12 +1,12 @@
 import { MongoDBAdapter } from '../../adapters/persistence/MongoDBAdapter';
-import { OpenAIAdapter } from '../../adapters/llm/OpenAIAdapter';
+// import { OpenAIAdapter } from '../../adapters/llm/OpenAIAdapter';
 import { SlackAdapter } from '../../adapters/slack/SlackAdapter';
 import { ProcessMessageUseCase } from '../../application/use-cases/ProcessMessageUseCase';
 
 export class Container {
   private services = {
     mongodb: null as MongoDBAdapter | null,
-    openai: null as OpenAIAdapter | null,
+    // openai: null as OpenAIAdapter | null,
     slack: null as SlackAdapter | null
   };
 
@@ -15,20 +15,28 @@ export class Container {
   };
 
   async initialize(): Promise<void> {
-    // Inicializar adaptadores
-    this.services.mongodb = new MongoDBAdapter();
-    this.services.openai = new OpenAIAdapter();
-    this.services.slack = new SlackAdapter();
+    try {
+      // Inicializar adaptadores
+      this.services.mongodb = new MongoDBAdapter();
+      // this.services.openai = new OpenAIAdapter();
+      this.services.slack = new SlackAdapter();
 
-    // Inicializar casos de uso
-    this.useCases.processMessage = new ProcessMessageUseCase(
-      this.services.slack,
-      this.services.openai
-    );
+      // Inicializar casos de uso
+      this.useCases.processMessage = new ProcessMessageUseCase(
+        this.services.slack,
+        null // temporalmente pasamos null en lugar de OpenAI
+      );
 
-    // Iniciar servicios
-    await this.services.mongodb.start(0);
-    await this.services.slack.start(Number(process.env.PORT) || 3000);
+      // Iniciar servicios
+      await this.services.mongodb.start(0);
+      console.log('💾 MongoDB inicializado correctamente');
+
+      await this.services.slack.start(3000);
+      console.log('⚡️ Slack inicializado correctamente');
+    } catch (error) {
+      console.error('Error durante la inicialización:', error);
+      throw error;
+    }
   }
 
   getProcessMessageUseCase(): ProcessMessageUseCase {
@@ -52,12 +60,15 @@ export class Container {
     return this.services.mongodb;
   }
 
+  // Comentamos temporalmente el getter de OpenAI
+  /*
   getOpenAIAdapter(): OpenAIAdapter {
     if (!this.services.openai) {
       throw new Error('Container not initialized');
     }
     return this.services.openai;
   }
+  */
 }
 
 export const container = new Container(); 

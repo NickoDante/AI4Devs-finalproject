@@ -1,4 +1,5 @@
-import { Message, BotResponse } from '../../domain/models/Message';
+import { Message } from '../../domain/models/Message';
+import { BotResponse } from '../../domain/models/BotResponse';
 import { ManageKnowledgeUseCase } from './ManageKnowledgeUseCase';
 import { KnowledgeContent } from '../../domain/ports/KnowledgePort';
 
@@ -36,12 +37,14 @@ export class HandleCommandUseCase {
         default:
           return {
             content: 'Comando no reconocido. Usa "help" para ver los comandos disponibles.',
+            type: 'error',
             metadata: { error: true }
           };
       }
     } catch (error) {
       return {
         content: `Error ejecutando el comando: ${(error as Error).message}`,
+        type: 'error',
         metadata: { error: true }
       };
     }
@@ -73,6 +76,7 @@ export class HandleCommandUseCase {
 • /search <término> - Busca información
 • /add <título> | <contenido> | <fuente> [| tags] - Agrega nuevo conocimiento
 • /update <id> | <título> | <contenido> | <fuente> [| tags] - Actualiza conocimiento existente`,
+      type: 'text',
       metadata: { confidence: 1 }
     };
   }
@@ -81,6 +85,7 @@ export class HandleCommandUseCase {
     if (args.length === 0) {
       return {
         content: 'Por favor, especifica un término de búsqueda.',
+        type: 'error',
         metadata: { error: true }
       };
     }
@@ -91,6 +96,7 @@ export class HandleCommandUseCase {
     if (results.length === 0) {
       return {
         content: 'No se encontraron resultados para tu búsqueda.',
+        type: 'text',
         metadata: { confidence: 0 }
       };
     }
@@ -102,6 +108,7 @@ export class HandleCommandUseCase {
 
     return {
       content,
+      type: 'text',
       metadata: {
         confidence: Math.max(...results.slice(0, 3).map(r => r.relevance)),
         source: results[0].source
@@ -114,6 +121,7 @@ export class HandleCommandUseCase {
     if (content.length < 3) {
       return {
         content: 'Formato incorrecto. Uso: /add <título> | <contenido> | <fuente> [| tags]',
+        type: 'error',
         metadata: { error: true }
       };
     }
@@ -129,6 +137,7 @@ export class HandleCommandUseCase {
 
     return {
       content: 'Conocimiento agregado exitosamente.',
+      type: 'text',
       metadata: { confidence: 1 }
     };
   }
@@ -138,6 +147,7 @@ export class HandleCommandUseCase {
     if (content.length < 4) {
       return {
         content: 'Formato incorrecto. Uso: /update <id> | <título> | <contenido> | <fuente> [| tags]',
+        type: 'error',
         metadata: { error: true }
       };
     }
@@ -154,6 +164,7 @@ export class HandleCommandUseCase {
 
     return {
       content: 'Conocimiento actualizado exitosamente.',
+      type: 'text',
       metadata: { confidence: 1 }
     };
   }

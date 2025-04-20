@@ -11,14 +11,4 @@ export interface Message {
     source?: string;
     [key: string]: any;
   };
-}
-
-export interface BotResponse {
-  content: string;
-  metadata?: {
-    confidence?: number;
-    source?: string;
-    context?: string;
-    error?: boolean;
-  };
 } 

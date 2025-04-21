@@ -5,25 +5,25 @@
 ETAPAS DE TRABAJO
 **Etapa 1: Setup Inicial y Configuración Base**
 - Configuración del entorno de desarrollo, estructuras base y conexiones principales
-- Duración: 2 semanas (22 Abril - 1 Mayo)
+- Duración: 2 semanas (21 Abril - 30 Abril, 2025)
 
 **Etapa 2: Desarrollo Core y Funcionalidades Principales**
 - Implementación de características principales del MVP
-- Duración: 2 semanas (6 Mayo - 14 Mayo)
+- Duración: 2 semanas (5 Mayo - 14 Mayo, 2025)
 
 **Etapa 3: Desarrollo de Integraciones y Mejoras**
 - Desarrollo de integraciones con servicios externos y optimizaciones
-- Duración: 3 semanas (20 Mayo - 31 Mayo)
+- Duración: 3 semanas (19 Mayo - 30 Mayo, 2025)
 
 **Etapa 4: Testing, Depuración y Documentación Final**
 - Pruebas, corrección de errores y documentación final
-- Duración: 2 semanas (8 Junio - 16 Junio)
+- Duración: 2 semanas (9 Junio - 16 Junio, 2025)
 
 ORGANIGRAMA
 ---
 Etapa 1
 ---
-* Lunes 22 de Abril
+* Lunes 21 de Abril, 2025
 * Semana #1
 * Horas: 4
 * Milestone: Código Funcional
@@ -33,7 +33,7 @@ Etapa 1
 - (♫) Inicializar proyecto Node.js con dependencias básicas
 - (♫) Crear estructura de carpetas siguiendo arquitectura hexagonal
 
-* Martes 23 de Abril
+* Martes 22 de Abril, 2025
 * Semana #1
 * Horas: 4
 * Milestone: Código Funcional
@@ -43,7 +43,7 @@ Etapa 1
 - (♫) Implementar conexión básica con Redis
 - (♫) Crear archivos de configuración base (.env, configs)
 
-* Miércoles 24 de Abril
+* Miércoles 23 de Abril, 2025
 * Semana #1
 * Horas: 4
 * Milestone: Código Funcional
@@ -51,9 +51,9 @@ Etapa 1
 - (♫) Configurar app de Slack y obtener tokens necesarios
 - (♫) Implementar conexión básica con Slack
 - (♫) Crear estructura base para comandos de Slack
-- ( ) Probar conexiones básicas end-to-end
+- (♫) Probar conexiones básicas end-to-end
 
-* Lunes 29 de Abril
+* Lunes 28 de Abril, 2025
 * Semana #2
 * Horas: 4
 * Milestone: Código Funcional
@@ -63,7 +63,7 @@ Etapa 1
 - ( ) Configurar sistema de logging
 - ( ) Implementar manejo básico de errores
 
-* Martes 30 de Abril
+* Martes 29 de Abril, 2025
 * Semana #2
 * Horas: 4
 * Milestone: Código Funcional
@@ -73,7 +73,7 @@ Etapa 1
 - ( ) Configurar sistema de caché con Redis
 - ( ) Implementar healthchecks básicos
 
-* Miércoles 1 de Mayo
+* Miércoles 30 de Abril, 2025
 * Semana #2
 * Horas: 4
 * Milestone: Código Funcional
@@ -86,7 +86,7 @@ Etapa 1
 ---
 Etapa 2
 ---
-* Lunes 6 de Mayo
+* Lunes 5 de Mayo, 2025
 * Semana #3
 * Horas: 4
 * Milestone: Código Funcional
@@ -96,7 +96,7 @@ Etapa 2
 - ( ) Crear adaptador básico para OpenAI/LLM
 - ( ) Configurar sistema de prompts
 
-* Martes 7 de Mayo
+* Martes 6 de Mayo, 2025
 * Semana #3
 * Horas: 4
 * Milestone: Código Funcional
@@ -106,7 +106,7 @@ Etapa 2
 - ( ) Implementar búsqueda semántica básica
 - ( ) Integrar respuestas con Slack Blocks
 
-* Miércoles 8 de Mayo
+* Miércoles 7 de Mayo, 2025
 * Semana #3
 * Horas: 4
 * Milestone: Código Funcional
@@ -116,7 +116,7 @@ Etapa 2
 - ( ) Implementar caché de respuestas frecuentes
 - ( ) Pruebas de comandos principales
 
-* Lunes 13 de Mayo
+* Lunes 12 de Mayo, 2025
 * Semana #4
 * Horas: 4
 * Milestone: Documentación Técnica
@@ -126,7 +126,7 @@ Etapa 2
 - ( ) Documentar flujos principales
 - ( ) Preparar documentación de arquitectura
 
-* Martes 14 de Mayo
+* Martes 13 de Mayo, 2025
 * Semana #4
 * Horas: 4
 * Milestone: Documentación Técnica
@@ -136,7 +136,7 @@ Etapa 2
 - ( ) Documentar configuraciones y variables
 - ( ) Review final de documentación
 
-* Miércoles 15 de Mayo
+* Miércoles 14 de Mayo, 2025
 * Semana #4
 * Horas: 4
 * Milestone: Documentación Técnica
@@ -149,7 +149,7 @@ Etapa 2
 ---
 Etapa 3
 ---
-* Lunes 20 de Mayo
+* Lunes 19 de Mayo, 2025
 * Semana #5
 * Horas: 4
 * Milestone: Código Funcional
@@ -159,7 +159,7 @@ Etapa 3
 - ( ) Implementar búsqueda en documentos
 - ( ) Pruebas de integración con Confluence
 
-* Martes 21 de Mayo
+* Martes 20 de Mayo, 2025
 * Semana #5
 * Horas: 4
 * Milestone: Código Funcional
@@ -169,7 +169,7 @@ Etapa 3
 - ( ) Crear sistema de feedback básico
 - ( ) Pruebas de generación de resúmenes
 
-* Miércoles 22 de Mayo
+* Miércoles 21 de Mayo, 2025
 * Semana #5
 * Horas: 4
 * Milestone: Código Funcional
@@ -179,7 +179,7 @@ Etapa 3
 - ( ) Mejorar formato de respuestas
 - ( ) Pruebas de rendimiento
 
-* Lunes 27 de Mayo
+* Lunes 26 de Mayo, 2025
 * Semana #6
 * Horas: 4
 * Milestone: Código Funcional
@@ -189,7 +189,7 @@ Etapa 3
 - ( ) Optimizar manejo de errores
 - ( ) Pruebas de robustez
 
-* Martes 28 de Mayo
+* Martes 27 de Mayo, 2025
 * Semana #6
 * Horas: 4
 * Milestone: Código Funcional
@@ -199,7 +199,7 @@ Etapa 3
 - ( ) Optimizar consumo de recursos
 - ( ) Pruebas de carga básicas
 
-* Miércoles 29 de Mayo
+* Miércoles 28 de Mayo, 2025
 * Semana #6
 * Horas: 4
 * Milestone: Código Funcional
@@ -212,7 +212,7 @@ Etapa 3
 ---
 Etapa 4
 ---
-* Lunes 8 de Junio
+* Lunes 9 de Junio, 2025
 * Semana #7
 * Horas: 4
 * Milestone: Proyecto Final
@@ -222,7 +222,7 @@ Etapa 4
 - ( ) Crear plan de correcciones
 - ( ) Iniciar correcciones prioritarias
 
-* Martes 9 de Junio
+* Martes 10 de Junio, 2025
 * Semana #7
 * Horas: 4
 * Milestone: Proyecto Final
@@ -232,7 +232,7 @@ Etapa 4
 - ( ) Mejorar mensajes de error
 - ( ) Pruebas de integración final
 
-* Miércoles 10 de Junio
+* Miércoles 11 de Junio, 2025
 * Semana #7
 * Horas: 4
 * Milestone: Proyecto Final
@@ -242,7 +242,7 @@ Etapa 4
 - ( ) Actualizar guías de usuario
 - ( ) Preparar demo del sistema
 
-* Lunes 15 de Junio
+* Lunes 15 de Junio, 2025
 * Semana #8
 * Horas: 4
 * Milestone: Proyecto Final
@@ -252,13 +252,13 @@ Etapa 4
 - ( ) Preparar documentación de entrega
 - ( ) Verificar requisitos de entrega
 
-* Martes 16 de Junio
+* Martes 16 de Junio, 2025
 * Semana #8
 * Horas: 4
 * Milestone: Proyecto Final
 * Objetivos:
 - ( ) Entrega final del proyecto
-- ( ) Documentación completa
+- ( ) Verificación final de documentación
 - ( ) Backup final del proyecto
 - ( ) Cierre del desarrollo
 
@@ -266,29 +266,29 @@ Etapa 4
 
 | Milestone 			| Fecha 			| Etapa 				| Prioridad | Objetivos |
 |-----------------------|-------------------|-----------------------|-----------|-----------|
-| Código Funcional 		| 22-24 Abril 		| 1 - Setup Inicial 	| Alta 		| • Crear repositorio y estructura base<br>• Configurar entorno desarrollo<br>• Implementar conexiones básicas |
-| Código Funcional 		| 29 Abril - 1 Mayo | 1 - Setup Inicial 	| Alta 		| • Implementar modelos y adaptadores<br>• Configurar autenticación y caché<br>• Pruebas de integración base |
-| Código Funcional 		| 6-8 Mayo 			| 2 - Desarrollo Core 	| Alta 		| • Implementar comandos base (/tg-help, /tg-search, /tg-admin)<br>• Crear sistema de búsqueda<br>• Integrar LLM |
-| Documentación Técnica | 13-14 Mayo 		| 2 - Desarrollo Core 	| Alta 		| • Documentar APIs y flujos<br>• Crear diagramas<br>• Finalizar documentación técnica |
-| 🛫 VIAJE 				| 15-18 Mayo		| - 					| - 		| Viaje a Medellín 		|
-| Código Funcional 		| 20-22 Mayo 		| 3 - Integraciones 	| Alta 		| • Integrar Confluence<br>• Implementar resúmenes<br>• Sistema de feedback |
-| Código Funcional 		| 27-29 Mayo 		| 3 - Integraciones 	| Media 	| • Implementar métricas<br>• Optimizar rendimiento<br>• Preparar para ausencia |
-| 🛫 VIAJE 				| 1-7 Junio 		| - 					| - 		| Viaje a USA 			|
-| Proyecto Final 		| 8-10 Junio 		| 4 - Testing 			| Alta 		| • Testing general<br>• Corrección de bugs<br>• Documentación de cambios |
-| Proyecto Final 		| 15-16 Junio 		| 4 - Testing 			| Alta 		| • Review final<br>• Últimos ajustes<br>• Entrega final |
+| Código Funcional 		| 21-23 Abril, 2025 	| 1 - Setup Inicial 	| Alta 		| • Crear repositorio y estructura base<br>• Configurar entorno desarrollo<br>• Implementar conexiones básicas |
+| Código Funcional 		| 28-30 Abril, 2025 | 1 - Setup Inicial 	| Alta 		| • Implementar modelos y adaptadores<br>• Configurar autenticación y caché<br>• Pruebas de integración base |
+| Código Funcional 		| 5-7 Mayo, 2025 		| 2 - Desarrollo Core 	| Alta 		| • Implementar comandos base (/tg-help, /tg-search, /tg-admin)<br>• Crear sistema de búsqueda<br>• Integrar LLM |
+| Documentación Técnica | 13-14 Mayo, 2025 	| 2 - Desarrollo Core 	| Alta 		| • Documentar APIs y flujos<br>• Crear diagramas<br>• Finalizar documentación técnica |
+| 🛫 VIAJE 				| 15-18 Mayo, 2025	| - 					| - 		| Viaje a Medellín 		|
+| Código Funcional 		| 19-21 Mayo, 2025 	| 3 - Integraciones 	| Alta 		| • Integrar Confluence<br>• Implementar resúmenes<br>• Sistema de feedback |
+| Código Funcional 		| 26-28 Mayo, 2025 	| 3 - Integraciones 	| Media 	| • Implementar métricas<br>• Optimizar rendimiento<br>• Preparar para ausencia |
+| 🛫 VIAJE 				| 1-7 Junio, 2025 	| - 					| - 		| Viaje a USA 			|
+| Proyecto Final 		| 9-11 Junio, 2025 	| 4 - Testing 			| Alta 		| • Testing general<br>• Corrección de bugs<br>• Documentación de cambios |
+| Proyecto Final 		| 15-16 Junio, 2025 	| 4 - Testing 			| Alta 		| • Review final<br>• Últimos ajustes<br>• Entrega final |
 
 ### Fechas Clave
 
 🎯 **Entregas Principales:**
-- Documentación Técnica: 14 de Mayo, 2024
-- Código Funcional: 31 de Mayo, 2024
-- Proyecto Final: 16 de Junio, 2024
+- Documentación Técnica: 14 de Mayo, 2025
+- Código Funcional: 30 de Mayo, 2025
+- Proyecto Final: 16 de Junio, 2025
 
 ✈️ **Períodos de Ausencia:**
-- Medellín: 15-18 Mayo, 2024
-- USA: 1-7 Junio, 2024
+- Medellín: 15-18 Mayo, 2025
+- USA: 1-7 Junio, 2025
 
 ⚠️ **Períodos de Buffer:**
 - Pre-documentación: 13-14 Mayo (25% del tiempo)
-- Pre-código funcional: 27-29 Mayo (25% del tiempo)
+- Pre-código funcional: 26-28 Mayo (25% del tiempo)
 - Pre-entrega final: 15-16 Junio (25% del tiempo) 

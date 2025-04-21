@@ -357,6 +357,11 @@ export class SlackAdapter implements MessagePort {
     this.app.event('app_mention', async ({ event, say }) => {
       console.log('👋 Mención recibida:', event);
       try {
+        if (!event.user || !event.text || !event.channel) {
+          console.warn('Evento de mención incompleto:', event);
+          return;
+        }
+
         const botResponse = await this.processMessage({
           content: event.text,
           userId: event.user,

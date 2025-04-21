@@ -1,13 +1,15 @@
 export interface Message {
+  content: string;
   userId: string;
   username: string;
-  content: string;
-  timestamp: Date;
   channel: string;
+  timestamp: Date;
+  type: 'direct_message' | 'mention' | 'command' | 'bot_message';
   threadId?: string;
-  type?: 'direct_message' | 'mention' | 'command' | 'bot_message';
   metadata?: {
-    command?: string;
+    command?: 'search' | 'question' | 'summary';
+    error?: boolean;
+    errorMessage?: string;
     source?: string;
     [key: string]: any;
   };

@@ -1,6 +1,6 @@
 export interface BotResponse {
   content: string;
-  type: 'text' | 'error' | 'action';
+  type: 'text' | 'error' | 'search_result' | 'summary';
   threadId?: string;
   attachments?: Array<{
     title?: string;
@@ -11,9 +11,11 @@ export interface BotResponse {
   metadata?: {
     source?: string;
     confidence?: number;
-    error?: string | boolean;
-    actionType?: string;
-    actionData?: any;
+    error?: boolean;
+    message?: string;
+    tokensUsed?: number;
+    promptTokens?: number;
+    completionTokens?: number;
     [key: string]: any;
   };
 } 

@@ -28,30 +28,30 @@ Etapa 1
 * Horas: 4
 * Milestone: Código Funcional
 * Objetivos:
-- (♫) Crear repositorio y estructura base del proyecto
-- (♫) Configurar entorno de desarrollo (TypeScript, ESLint, Prettier)
-- (♫) Inicializar proyecto Node.js con dependencias básicas
-- (♫) Crear estructura de carpetas siguiendo arquitectura hexagonal
+- (✅) Crear repositorio y estructura base del proyecto
+- (✅) Configurar entorno de desarrollo (TypeScript, ESLint, Prettier)
+- (✅) Inicializar proyecto Node.js con dependencias básicas
+- (✅) Crear estructura de carpetas siguiendo arquitectura hexagonal
 
 * Martes 22 de Abril, 2025
 * Semana #1
 * Horas: 4
 * Milestone: Código Funcional
 * Objetivos:
-- (♫) Configurar Docker y docker-compose
-- (♫) Implementar conexión básica con MongoDB
-- (♫) Implementar conexión básica con Redis
-- (♫) Crear archivos de configuración base (.env, configs)
+- (✅) Configurar Docker y docker-compose
+- (✅) Implementar conexión básica con MongoDB
+- (✅) Implementar conexión básica con Redis
+- (✅) Crear archivos de configuración base (.env, configs)
 
 * Miércoles 23 de Abril, 2025
 * Semana #1
 * Horas: 4
 * Milestone: Código Funcional
 * Objetivos:
-- (♫) Configurar app de Slack y obtener tokens necesarios
-- (♫) Implementar conexión básica con Slack
-- (♫) Crear estructura base para comandos de Slack
-- (♫) Probar conexiones básicas end-to-end
+- (✅) Configurar app de Slack y obtener tokens necesarios
+- (✅) Implementar conexión básica con Slack
+- (✅) Crear estructura base para comandos de Slack
+- (✅) Probar conexiones básicas end-to-end
 
 * Lunes 28 de Abril, 2025
 * Semana #2

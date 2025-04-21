@@ -14,6 +14,10 @@ export class ConfluenceAdapter implements KnowledgePort {
       username: process.env.CONFLUENCE_USERNAME || '',
       password: process.env.CONFLUENCE_API_TOKEN || ''
     };
+
+    if (!this.baseUrl || !this.auth.username || !this.auth.password) {
+      throw new Error('Las variables de entorno CONFLUENCE_HOST, CONFLUENCE_USERNAME y CONFLUENCE_API_TOKEN son requeridas');
+    }
   }
 
   async searchKnowledge(query: string): Promise<SearchResult[]> {
@@ -21,8 +25,9 @@ export class ConfluenceAdapter implements KnowledgePort {
       const response = await axios.get(`${this.baseUrl}/rest/api/content/search`, {
         auth: this.auth,
         params: {
-          cql: `text ~ "${query}"`,
-          expand: 'body.storage,version'
+          cql: `text ~ "${query}" AND space = "TG"`,
+          expand: 'body.storage,version,space,metadata.labels',
+          limit: 10
         }
       });
 
@@ -30,25 +35,29 @@ export class ConfluenceAdapter implements KnowledgePort {
         id: result.id,
         content: result.body.storage.value,
         relevance: this.calculateRelevance(result, query),
-        source: `${result.title} (Confluence)`,
-        lastUpdated: new Date(result.version.when)
+        source: `${result.space.name} > ${result.title}`,
+        lastUpdated: new Date(result.version.when),
+        metadata: {
+          spaceKey: result.space.key,
+          version: result.version.number,
+          labels: result.metadata?.labels?.results?.map((label: any) => label.name) || [],
+          url: `${this.baseUrl}${result._links.webui}`
+        }
       }));
     } catch (error) {
-      console.error('Error searching in Confluence:', error);
-      return [];
+      console.error('Error buscando en Confluence:', error);
+      throw error;
     }
   }
 
   async saveKnowledge(content: KnowledgeContent): Promise<void> {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${this.baseUrl}/rest/api/content`,
         {
           type: 'page',
           title: content.title,
-          space: {
-            key: 'TG' // Espacio de Teravision Games
-          },
+          space: { key: 'TG' },
           body: {
             storage: {
               value: content.content,
@@ -56,13 +65,17 @@ export class ConfluenceAdapter implements KnowledgePort {
             }
           },
           metadata: {
-            labels: content.tags?.map(tag => ({ name: tag }))
+            labels: content.tags?.map(tag => ({ name: tag })) || []
           }
         },
         { auth: this.auth }
       );
+
+      if (!response.data.id) {
+        throw new Error('Error al crear la página en Confluence');
+      }
     } catch (error) {
-      console.error('Error saving to Confluence:', error);
+      console.error('Error guardando en Confluence:', error);
       throw error;
     }
   }
@@ -78,6 +91,7 @@ export class ConfluenceAdapter implements KnowledgePort {
             number: currentVersion + 1
           },
           title: content.title,
+          type: 'page',
           body: {
             storage: {
               value: content.content,
@@ -85,32 +99,44 @@ export class ConfluenceAdapter implements KnowledgePort {
             }
           },
           metadata: {
-            labels: content.tags?.map(tag => ({ name: tag }))
+            labels: content.tags?.map(tag => ({ name: tag })) || []
           }
         },
         { auth: this.auth }
       );
     } catch (error) {
-      console.error('Error updating in Confluence:', error);
+      console.error('Error actualizando en Confluence:', error);
       throw error;
     }
   }
 
   private async getCurrentVersion(id: string): Promise<number> {
-    const response = await axios.get(`${this.baseUrl}/rest/api/content/${id}`, {
-      auth: this.auth
-    });
-    return response.data.version.number;
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/rest/api/content/${id}`,
+        { auth: this.auth }
+      );
+      return response.data.version.number;
+    } catch (error) {
+      console.error('Error obteniendo versión del documento:', error);
+      throw error;
+    }
   }
 
   private calculateRelevance(result: any, query: string): number {
-    // Implementación básica de relevancia basada en coincidencia de texto
-    const content = result.body.storage.value.toLowerCase();
-    const searchTerms = query.toLowerCase().split(' ');
+    const textToSearch = [
+      result.title,
+      result.body?.storage?.value || '',
+      ...(result.metadata?.labels?.results?.map((label: any) => label.name) || [])
+    ].join(' ').toLowerCase();
     
-    return searchTerms.reduce((relevance: number, term: string) => {
-      const matches = content.split(term).length - 1;
-      return relevance + matches;
-    }, 0) / searchTerms.length;
+    const queryTerms = query.toLowerCase().split(/\s+/);
+    const matches = queryTerms.reduce((count, term) => {
+      const regex = new RegExp(term, 'g');
+      return count + (textToSearch.match(regex)?.length || 0);
+    }, 0);
+
+    // Normalizar relevancia entre 0 y 1
+    return Math.min(matches / (queryTerms.length * 2), 1);
   }
 } 

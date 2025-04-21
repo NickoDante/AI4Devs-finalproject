@@ -1,90 +1,84 @@
 import OpenAI from 'openai';
-import { MessagePort } from '../../domain/ports/MessagePort';
 import { Message } from '../../domain/models/Message';
 import { BotResponse } from '../../domain/models/BotResponse';
+import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
-export class OpenAIAdapter implements MessagePort {
+export class OpenAIAdapter implements AIAdapter {
   private openai: OpenAI;
-  private context: ChatCompletionMessageParam[] = [];
+  private context: Message[] = [];
+  private readonly MAX_CONTEXT_LENGTH = 10;
 
-  constructor() {
+  constructor(apiKey?: string) {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    // Inicializar el contexto con el prompt del sistema
-    this.context.push({
-      role: 'system',
-      content: `Eres TG: The Guardian, un chatbot corporativo para Teravision Games. 
-      Tu objetivo es ayudar a los empleados proporcionando información precisa y útil.`
+      apiKey: apiKey || process.env.OPENAI_API_KEY
     });
   }
 
   async processMessage(message: Message): Promise<BotResponse> {
     try {
-      // Agregar el mensaje del usuario al contexto
-      this.context.push({
-        role: 'user',
-        content: message.content
-      });
+      // Agregar mensaje al contexto
+      this.context.push(message);
+      if (this.context.length > this.MAX_CONTEXT_LENGTH) {
+        this.context.shift();
+      }
 
+      // Construir mensajes para la API
+      const messages: ChatCompletionMessageParam[] = [
+        {
+          role: "system",
+          content: "Eres un asistente útil que ayuda a los empleados de Teravision Games a encontrar información y responder preguntas sobre la empresa."
+        },
+        ...this.context.map(msg => ({
+          role: msg.userId === "system" ? "system" as const : "user" as const,
+          content: msg.content
+        }))
+      ];
+
+      // Llamar a la API de OpenAI
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: this.context,
+        model: "gpt-3.5-turbo",
+        messages,
         temperature: 0.7,
         max_tokens: 500
       });
 
-      const response = completion.choices[0]?.message?.content || 'Lo siento, no pude procesar tu mensaje.';
+      const response = completion.choices[0]?.message?.content || "Lo siento, no pude procesar tu mensaje.";
 
-      // Agregar la respuesta al contexto
-      this.context.push({
-        role: 'assistant',
-        content: response
-      });
-
-      // Mantener el contexto limitado a las últimas 10 interacciones
-      if (this.context.length > 21) { // 1 system + 10 pares de user/assistant
-        this.context = [
-          this.context[0], // Mantener el prompt del sistema
-          ...this.context.slice(-20) // Mantener las últimas 20 interacciones
-        ];
-      }
-      
       return {
         content: response,
         type: 'text',
+        threadId: message.threadId,
         metadata: {
-          source: 'OpenAI GPT-3.5',
-          confidence: 0.9
+          model: "gpt-3.5-turbo",
+          confidence: completion.choices[0]?.finish_reason === 'stop' ? 0.9 : 0.7
         }
       };
     } catch (error) {
-      console.error('Error processing message with OpenAI:', error);
-      return {
-        content: 'Lo siento, ocurrió un error al procesar tu mensaje.',
-        type: 'error',
-        metadata: {
-          error: error instanceof Error ? error.message : 'Error desconocido'
-        }
-      };
+      console.error('Error en OpenAI API:', error);
+      throw new Error('Error al procesar el mensaje con OpenAI');
     }
   }
 
-  async sendMessage(channel: string, text: string): Promise<void> {
-    // OpenAI no necesita implementar sendMessage, pero debe estar presente
-    // para cumplir con la interfaz
-    throw new Error('Method not implemented in OpenAI adapter');
-  }
+  private buildPrompt(message: Message): string {
+    let prompt = "";
 
-  async start(port: number): Promise<void> {
-    // OpenAI no necesita iniciar un servidor, pero debe implementar el método
-    console.log('OpenAI adapter initialized');
+    // Agregar contexto previo si existe
+    if (this.context.length > 1) {
+      prompt += "Contexto previo:\n";
+      this.context.slice(0, -1).forEach(msg => {
+        prompt += `${msg.username}: ${msg.content}\n`;
+      });
+      prompt += "\n";
+    }
+
+    // Agregar el mensaje actual
+    prompt += `${message.username}: ${message.content}`;
+
+    return prompt;
   }
 
   async clearContext(): Promise<void> {
-    // Mantener solo el prompt del sistema
-    this.context = [this.context[0]];
+    this.context = [];
   }
 } 

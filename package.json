@@ -10,10 +10,16 @@
   },
   "dependencies": {
     "@slack/bolt": "^3.17.1",
-    "dotenv": "^16.4.5"
+    "@types/winston": "^2.4.4",
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.16.0",
+    "openai": "^4.95.1",
+    "redis": "^4.7.0",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.24",
+    "@types/mongodb": "^4.0.6",
+    "@types/node": "^20.17.30",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"
   },

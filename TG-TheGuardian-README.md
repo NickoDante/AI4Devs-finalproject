@@ -2,7 +2,7 @@
 
 ## Descripción General
 
-TG: The Guardian es un chatbot corporativo inteligente diseñado específicamente para Teravision Games, que se integra seamlessly con Slack y Confluence para proporcionar acceso rápido y eficiente al conocimiento y la documentación interna de la empresa. Representado por la icónica mascota de múltiples ojos de la compañía, este asistente virtual aprovecha tecnologías de procesamiento de lenguaje natural para entender consultas conversacionales, localizar información relevante, y presentarla de manera estructurada y accesible. El sistema actúa como intermediario entre los empleados y la base de documentación corporativa, eliminando la necesidad de navegar manualmente a través de múltiples páginas de Confluence para encontrar información específica. The Guardian también puede resumir documentos extensos, responder preguntas administrativas frecuentes, y está diseñado para crecer en capacidades a medida que comprende mejor el contexto único de Teravision Games y sus procesos internos.
+TG: The Guardian es un chatbot corporativo inteligente diseñado específicamente para Teravision Games, que se integra seamlessly with Slack and Confluence para proporcionar acceso rápido y eficiente al conocimiento y la documentación interna de la empresa. Representado por la icónica mascota de múltiples ojos de la compañía, este asistente virtual aprovecha tecnologías de procesamiento de lenguaje natural para entender consultas conversacionales, localizar información relevante, y presentarla de manera estructurada y accesible. El sistema actúa como intermediario entre los empleados y la base de documentación corporativa, eliminando la necesidad de navegar manualmente a través de múltiples páginas de Confluence para encontrar información específica. The Guardian también puede resumir documentos extensos, responder preguntas administrativas frecuentes, y está diseñado para crecer en capacidades a medida que comprende mejor el contexto único de Teravision Games y sus procesos internos.
 
 ## Objetivo
 
@@ -12,15 +12,15 @@ El propósito principal de TG: The Guardian es optimizar el acceso al conocimien
 
 ## Características y Funcionalidades Principales
 
-### 1. Búsqueda de Documentos por Palabras Clave
+** 1. Búsqueda de Documentos por Palabras Clave**
 
 Esta funcionalidad permite a los empleados de Teravision Games encontrar rápidamente documentación relevante sin tener que navegar por la estructura de Confluence o recordar ubicaciones exactas de documentos. Los usuarios pueden realizar consultas en lenguaje natural como "¿Dónde está la documentación sobre el sistema de combate?" o "Busca documentos relacionados con el proceso de onboarding", y The Guardian responderá con enlaces directos a las páginas relevantes y una breve descripción del contenido. Esta característica responde directamente a la necesidad expresada por Cyndi de "localizar documentación por medio de palabras clave" y facilita el acceso a información crítica desde cualquier lugar a través de Slack.
 
-### 2. Respuestas a Preguntas Administrativas
+** 2. Respuestas a Preguntas Administrativas**
 
 The Guardian puede responder a consultas administrativas frecuentes relacionadas con procesos internos, políticas de la empresa, y procedimientos, aliviando la carga sobre el personal de recursos humanos y administración. Los empleados pueden preguntar sobre temas como "¿Cómo solicito un certificado laboral?", "¿Cuál es el proceso para pedir nuevos equipos?" o "¿Qué pasos debo seguir para solicitar vacaciones?", recibiendo respuestas precisas extraídas directamente de la documentación oficial. Esta funcionalidad aborda específicamente la necesidad identificada por Kata de tener acceso a información sobre "certificado laboral, con acceso a confluence donde esta el Form" y "adquisición de elementos de trabajo", automatizando el primer nivel de soporte para consultas administrativas rutinarias.
 
-### 3. Resumen de Documentos y Páginas de Confluence
+** 3. Resumen de Documentos y Páginas de Confluence**
 
 Esta característica permite a los miembros del equipo obtener rápidamente la esencia de documentos extensos sin tener que leerlos completamente, ahorrando tiempo valioso durante la jornada laboral. Los usuarios pueden solicitar a The Guardian que "resuma la página sobre el sistema de monetización" o "dame los puntos clave del documento de diseño del último proyecto", recibiendo un resumen conciso que destaca la información más relevante. Esta funcionalidad responde indirectamente a varias necesidades expresadas por el equipo, particularmente las relacionadas con documentación eficiente (mencionada por Jesus, JJ, Jero, Julian, Duvan, y Cesar), ya que permite a los empleados consumir información técnica y de procesos de manera más eficiente, facilitando la comprensión rápida de documentos complejos y extensos.
 
@@ -37,17 +37,6 @@ TG: The Guardian cubre las siguientes necesidades identificadas por el equipo de
 - Respuestas a preguntas laborales con acceso a Confluence (KATA)
 - Facilitar el acceso a información administrativa (KATA)
 - Centralización del conocimiento corporativo (necesidad general)
-
-## Tiempo de Desarrollo
-
-El desarrollo de un MVP (Producto Mínimo Viable) funcional de TG: The Guardian está planificado para completarse en 9 semanas, con un total de 12 horas de trabajo semanal (4 horas cada lunes, martes y miércoles). El cronograma contempla:
-
-- **Semanas 1-3**: Prototipado rápido y configuración básica
-- **Semanas 4-5**: Desarrollo principal y documentación técnica
-- **Semanas 6-7**: Finalización de la implementación y pruebas
-- **Semana 9**: Pulido final y preparación para entrega
-
-El cronograma incluye un 25% del tiempo total (12 horas) reservado específicamente para contingencias y resolución de problemas imprevistos.
 
 ## Dificultad
 
@@ -110,41 +99,6 @@ The Guardian implementará las siguientes opciones predefinidas para facilitar s
 4. **Sugerencias contextuales**:
    - Recomendaciones basadas en el historial de consultas
    - Sugerencias de documentos relacionados con la consulta actual
-
----
-
-## Cronograma Optimizado de Desarrollo
-
-| Semana | Fecha | Actividad | Enfoque | Horas | Milestone |
-|--------|-------|-----------|---------|-------|-----------|
-| **Semana 1** | Lun 14 Abr | Análisis de requisitos y configuración inicial | Doc + Dev | 4h | M1/M2 |
-| | Mar 15 Abr | Diseño de arquitectura y prueba API Slack | Doc + Dev | 4h | M1/M2 |
-| | Mié 16 Abr | Implementación de bot básico en Slack | Dev | 4h | M2 |
-| **Semana 2** | Lun 21 Abr | Diseño de modelo de datos y conexión a Confluence | Doc + Dev | 4h | M1/M2 |
-| | Mar 22 Abr | Especificación de API y prueba lectura documentos | Doc + Dev | 4h | M1/M2 |
-| | Mié 23 Abr | Implementación de consulta básica a Confluence | Dev | 4h | M2 |
-| **Semana 3** | Lun 28 Abr | Documentación interfaces y prueba OpenAI API | Doc + Dev | 4h | M1/M2 |
-| | Mar 29 Abr | Especificación de comandos y mensajes | Doc | 4h | M1 |
-| | Mié 30 Abr | Integración básica con LLM (OpenAI/Claude) | Dev | 4h | M2 |
-| **Semana 4** | Lun 5 May | Diagramas técnicos y búsqueda por palabras clave | Doc + Dev | 4h | M1/M2 |
-| | Mar 6 May | Documentación de flujos de usuario y pruebas | Doc + Dev | 4h | M1/M2 |
-| | Mié 7 May | **Tiempo de contingencia - Resolución de problemas** | Dev | 4h | M2 |
-| **Semana 5** | Lun 12 May | Finalización de documentación y pruebas MVP | Doc + Dev | 4h | M1/M2 |
-| | Mar 13 May | Pulido de documentación y revisión | Doc | 4h | M1 |
-| | **Mié 14 May** | **ENTREGA MILESTONE 1: Documentación técnica** | Doc | 4h | **M1** |
-| | 15-18 May | *Viaje a Medellín* | - | - | - |
-| **Semana 6** | Lun 19 May | Implementación de respuestas administrativas | Dev | 4h | M2 |
-| | Mar 20 May | Desarrollo de resumen de documentos | Dev | 4h | M2 |
-| | Mié 21 May | Integración de componentes y pruebas | Dev | 4h | M2 |
-| **Semana 7** | Lun 26 May | **Tiempo de contingencia - Resolución de problemas** | Dev | 4h | M2 |
-| | Mar 27 May | **Tiempo de contingencia - Resolución de problemas** | Dev | 4h | M2 |
-| | Mié 28 May | Finalización y empaquetado de código funcional | Dev | 4h | M2 |
-| **Viaje** | *1-7 Jun* | *Viaje a USA* | - | - | - |
-| **Semana 9** | Lun 9 Jun | Pruebas de integración y corrección de errores | Dev | 4h | M3 |
-| | Mar 10 Jun | Optimización de respuestas y experiencia de usuario | Dev | 4h | M3 |
-| | Mié 11 Jun | Documentación final y manual de usuario | Doc | 4h | M3 |
-| **Semana 10** | **Lun 16 Jun** | **ENTREGA MILESTONE 3: Proyecto final completo** | - | - | **M3** |
-
 ---
 
 ## Diagrama Recomendado: Diagrama de Componentes
@@ -742,45 +696,6 @@ flowchart TD
     class Logs,Monitor support
 ```
 
-### Proceso de Despliegue
-
-1. Preparación del Entorno (Semana 1)
-- Configuración de repositorio: Inicialización del proyecto con estructura de carpetas según arquitectura hexagonal
-- Configuración de contenedores Docker: Creación de Dockerfile y docker-compose para desarrollo local
-- Configuración de variables de entorno: Para separar credenciales y configuraciones del código
-
-2. Desarrollo Incremental por Componentes (Semanas 2-5)
-El despliegue se realiza mediante integración continua utilizando un enfoque de desarrollo por componentes:
-
-* Adaptador de Slack: Prioridad alta - Es el punto de entrada para los usuarios
-	- Configuración de la App en Slack
-	- Implementación de webhook para recibir mensajes
-	- Desarrollo de comandos básicos de Slack (/tg-search, /tg-admin, /tg-summary)
-
-* Servicio Central (Core): Componente crítico - Implementa la lógica de negocio
-	- Despliegue del dominio central que coordina los casos de uso
-	- Implementación de los puertos definidos en la arquitectura hexagonal
-
-* Adaptadores de Servicios Externos:
-	- Implementación del adaptador de Confluence para acceso a documentación
-	- Configuración del adaptador LLM para procesamiento de lenguaje natural
-	- Conexión con bases de datos (MongoDB, Redis, VectorDB)
-
-3. Despliegue a Entorno de Staging (Semana 6)
-- Configuración de infraestructura cloud mediante IaC (Infrastructure as Code)
-- Despliegue de bases de datos y servicios en entorno de staging
-- Implementación de pruebas de integración automatizadas
-
-4. Pruebas y Optimización (Semanas 7-8)
-- Pruebas de carga para verificar rendimiento bajo demanda
-- Afinación de configuraciones para optimizar respuesta
-- Corrección de errores y ajustes finales
-
-5. Despliegue a Producción (Semana 9)
-- Migración controlada a entorno de producción
-- Configuración de monitoreo y alertas
-- Documentación final del sistema y entrega
-
 ---
 
 ## Épicas para TG: The Guardian - MVP
@@ -849,31 +764,6 @@ El despliegue se realiza mediante integración continua utilizando un enfoque de
 - Implementación de métricas de uso y rendimiento
 - Desarrollo de alertas para situaciones críticas
 - Implementación de feedback de usuario para mejora continua
-
-### Priorización y Distribución Temporal
-Para cumplir con el cronograma de 9 semanas, vamos a trabajar:
-
-- Semanas 1-2:
-Configuración de Infraestructura Base (Alta prioridad)
-Integración con Slack - Configuración básica (Alta prioridad)
-
-- Semanas 2-3:
-Integración con Confluence - Adaptador básico (Alta prioridad)
-Núcleo de Procesamiento de LLM - Configuración inicial (Alta prioridad)
-
-- Semanas 3-5:
-Búsqueda de Documentos por Palabras Clave (Funcionalidad central - Alta prioridad)
-Persistencia y Caché - Implementación básica (Media prioridad)
-
-- Semanas 5-7:
-Respuestas a Preguntas Administrativas (Alta prioridad)
-Resumen de Documentos y Páginas (Media prioridad)
-Integración con Slack - Características avanzadas (Media prioridad)
-
-- Semanas 7-9:
-Monitoreo y Observabilidad (Baja prioridad, pero necesaria)
-Pulido y optimización general (Alta prioridad)
-Resolución de bugs y problemas identificados (Alta prioridad)
 
 ### Ejemplos de Stories por Epicas (No oficiales)
 **Búsqueda de Documentos**

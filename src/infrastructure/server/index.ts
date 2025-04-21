@@ -1,6 +1,8 @@
 import express from 'express';
 import { App, LogLevel } from '@slack/bolt';
 import { registerCommands } from '../../interfaces/slack/commands';
+import { HealthCheckService } from '../health/HealthCheckService';
+import { container } from '../di';
 
 export const startServer = async () => {
   const app = express();
@@ -21,6 +23,29 @@ export const startServer = async () => {
 
   // Registrar comandos
   registerCommands(slackApp);
+
+  // Crear servicio de health check
+  const healthCheckService = new HealthCheckService(
+    container.getCacheAdapter(),
+    container.getPersistenceAdapter(),
+    container.getLogger()
+  );
+
+  // Endpoint de health check
+  app.get('/health', async (req, res) => {
+    try {
+      const health = await healthCheckService.checkHealth();
+      res.status(health.status === 'healthy' ? 200 : 
+                 health.status === 'degraded' ? 200 : 503)
+         .json(health);
+    } catch (error) {
+      res.status(500).json({
+        status: 'unhealthy',
+        timestamp: new Date(),
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  });
 
   // Middleware de error global
   app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -43,6 +68,7 @@ export const startServer = async () => {
     // Iniciar servidor Express
     app.listen(port, () => {
       console.log(`🚀 Servidor Express corriendo en el puerto ${port}`);
+      console.log(`🏥 Health check disponible en http://localhost:${port}/health`);
     });
   } catch (error) {
     console.error('❌ Error crítico al iniciar el bot:', error);

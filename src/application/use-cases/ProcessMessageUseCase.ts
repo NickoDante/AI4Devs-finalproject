@@ -4,20 +4,32 @@ import { MessagePort } from '../../domain/ports/MessagePort';
 import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
 import { CachePort } from '../../domain/ports/CachePort';
+import { Logger } from 'winston';
 
 export class ProcessMessageUseCase {
+  private readonly CACHE_NAMESPACE = 'search-results';
+  private readonly CACHE_TTL = 3600; // 1 hora
+
   constructor(
     private readonly messagePort: MessagePort,
     private readonly aiAdapter: AIAdapter,
     private readonly persistencePort: PersistencePort,
-    private readonly cachePort: CachePort
+    private readonly cachePort: CachePort,
+    private readonly logger: Logger
   ) {}
 
   async execute(message: Message): Promise<BotResponse> {
     try {
+      const cacheKey = `${this.CACHE_NAMESPACE}:${message.content}`;
+
       // 1. Intentar obtener respuesta del caché
-      const cachedResponse = await this.cachePort.getCachedSearchResults(message.content);
+      const cachedResponse = await this.cachePort.get<string[]>(cacheKey);
+
       if (cachedResponse) {
+        this.logger.info('Respuesta encontrada en caché', {
+          content: message.content
+        });
+
         return {
           content: cachedResponse[0],
           type: 'text',
@@ -36,11 +48,15 @@ export class ProcessMessageUseCase {
       await this.messagePort.sendMessage(message.channel, aiResponse.content);
 
       // 5. Cachear la respuesta para futuras consultas similares
-      await this.cachePort.cacheSearchResults(message.content, [aiResponse.content]);
+      await this.cachePort.set(
+        cacheKey,
+        [aiResponse.content],
+        { ttl: this.CACHE_TTL }
+      );
 
       return aiResponse;
     } catch (error) {
-      console.error('Error processing message:', error);
+      this.logger.error('Error procesando mensaje:', error);
       
       // Guardar el error en la persistencia para análisis
       await this.persistencePort.saveMessage({

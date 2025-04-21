@@ -1685,418 +1685,141 @@ export OPENAI_API_KEY=sk-xxxxxxxxxxxx
 - [ ] Hacer un **security review por sprint**, especialmente al integrar nuevas funcionalidades con acceso a documentos, usuarios o bases de datos.
 - [ ] Registrar métricas de acceso y uso del bot para tener trazabilidad ante posibles incidentes.
 
-------------------------------------
-Como Usar el bot (15 de marzo 2024)
-------------------------------------
+---
 
-Esta guía te ayudará a configurar y probar el bot paso a paso, incluso si nunca has creado una aplicación de Slack antes.
+## Guía de Despliegue
 
-### 1. Crear una App en Slack (Solo la primera vez)
+Esta sección detalla los pasos necesarios para desplegar y ejecutar TG: The Guardian tanto en modo local como con Docker.
 
-1. Ve a [api.slack.com/apps](https://api.slack.com/apps)
-2. Haz clic en "Create New App"
-   - Selecciona "From scratch"
-   - Dale un nombre (ej: "TG The Guardian")
-   - Selecciona el workspace donde lo vas a instalar
+### Requisitos Previos
 
-3. En la página de tu app, configura lo siguiente:
-   
-   a) En "Socket Mode":
-   - Activa "Enable Socket Mode"
-   - Se te pedirá crear un token de app, dale un nombre (ej: "socket-token")
-   - Copia el token que empieza con `xapp-` y guárdalo
-
-   b) En "OAuth & Permissions":
-   - Baja hasta "Scopes" y añade estos Bot Token Scopes:
-     * `commands`
-     * `chat:write`
-     * `app_mentions:read`
-   - Sube hasta arriba y haz clic en "Install to Workspace"
-   - Después de instalar, copia el "Bot User OAuth Token" que empieza con `xoxb-`
-
-   c) En "Basic Information":
-   - Baja hasta "App Credentials"
-   - Copia el "Signing Secret"
-
-   d) En "Slash Commands":
-   - Crea tres nuevos comandos:
-     1. Command: `/tg-help`
-        Description: "Muestra la ayuda disponible"
-     2. Command: `/tg-search`
-        Description: "Busca información en la documentación"
-     3. Command: `/tg-admin`
-        Description: "Realiza consultas administrativas"
-
-### 2. Configurar el Proyecto
-
-1. Abre el archivo `.env` y actualiza estos valores con los que copiaste:
-   ```env
-   SLACK_BOT_TOKEN=xoxb-tu-bot-token
-   SLACK_SIGNING_SECRET=tu-signing-secret
-   SLACK_APP_TOKEN=xapp-tu-app-token
-   ```
-
-2. Asegúrate de tener Docker Desktop instalado y ejecutándose en tu computadora.
-
-### 3. Iniciar el Bot
-
-1. Abre una terminal en la carpeta del proyecto
-
-2. Asegúrate de que Docker Desktop esté corriendo
-   - Busca el ícono de Docker en tu barra de tareas
-   - Si no está, abre Docker Desktop y espera a que inicie
-
-3. Ejecuta el bot:
-   ```bash
-   docker-compose up
-   ```
-
-4. Espera a ver estos mensajes en la terminal:
-   ```
-   ⚡️ Slack Bot iniciado con Socket Mode
-   🚀 Servidor Express corriendo en el puerto 3001
-   ```
-
-### 4. Probar el Bot
-
-1. Abre Slack en tu navegador o la app de escritorio
-   - Asegúrate de estar en el workspace donde instalaste el bot
-
-2. Prueba los comandos en este orden:
-
-   a) Primero el comando de ayuda:
-   - Escribe `/tg-help` en cualquier canal
-   - Deberías ver una respuesta con la lista de comandos disponibles
-
-   b) Luego prueba el comando de búsqueda:
-   - Escribe `/tg-search documentación`
-   - Deberías ver un mensaje indicando que está buscando
-
-   c) Finalmente, prueba el comando administrativo:
-   - Escribe `/tg-admin vacaciones`
-   - Deberías ver una respuesta sobre consultas administrativas
-
-### 5. Solución de Problemas Comunes
-
-Si los comandos no funcionan:
-
-1. **Los comandos no aparecen al escribir "/"**
-   - La app no está instalada correctamente en el workspace
-   - Solución: Ve a la página de tu app y haz clic en "Reinstall to Workspace"
-
-2. **Error "dispatch_failed"**
-   - Faltan permisos o hay un problema con los tokens
-   - Solución: Verifica que todos los tokens en `.env` estén correctos
-   - Reinicia el bot con `docker-compose down` y luego `docker-compose up`
-
-3. **No ves los logs del bot**
-   - El bot no está corriendo correctamente
-   - Solución: Verifica que Docker esté corriendo y reinicia el bot
-
-### 6. Detener el Bot
-
-Cuando termines de usar el bot:
-
-1. En la terminal donde está corriendo:
-   - Presiona `Ctrl + C` para detener el proceso
-   - Espera a que todos los contenedores se detengan
-
-2. Para asegurarte de que todo está detenido:
-   ```bash
-   docker-compose down
-   ```
-
-### Notas Importantes
-
-- El bot debe estar corriendo (docker-compose up) para que los comandos funcionen
-- Cada vez que modifiques el código o el `.env`, deberás reiniciar el bot
-- Los logs en la terminal te ayudarán a identificar problemas
-- Si tienes dudas, revisa los logs cuando ejecutes un comando para ver qué está pasando
-
-------------------------------------
-Instalación del Proyecto desde Cero
-------------------------------------
-
-Esta guía te ayudará a configurar el proyecto en una nueva máquina, asegurando que todas las dependencias y configuraciones necesarias estén correctamente instaladas.
-
-### Prerrequisitos
-
-Asegúrate de tener instalado:
-- Node.js (v18 o superior)
-- npm (v9 o superior)
-- Docker Desktop
+- Node.js v18 o superior
+- npm v9 o superior
+- Docker y Docker Compose (para modo Docker)
 - Git
 
-### 1. Clonar el Repositorio
+### Estructura de Archivos de Configuración
 
-```bash
-# Clonar el repositorio
-git clone <URL_DEL_REPOSITORIO>
-cd finalproject-NNB
+El proyecto utiliza dos archivos de configuración principales:
+- `.env`: Para configuración con Docker
+- `.env.local`: Para desarrollo local
 
-# Crear rama de desarrollo (opcional)
-git checkout -b develop
-```
-
-### 2. Configurar Variables de Entorno
-
-1. Crea un archivo `.env` en la raíz del proyecto:
+Ambos archivos deben contener las siguientes variables:
 ```env
-# Configuración del servidor
-PORT=3001
+# Configuración de MongoDB
+MONGODB_URI=mongodb://localhost:27017/tg-guardian  # Para local
+# MONGODB_URI=mongodb://mongodb:27017/tg-guardian  # Para Docker
 
-# MongoDB
-MONGODB_URI=mongodb://localhost:27017/tg-guardian
+# Configuración de Redis
+REDIS_HOST=localhost  # Para local
+# REDIS_HOST=redis    # Para Docker
+REDIS_PORT=6379
+REDIS_DB=0
 
-# Redis
-REDIS_URL=redis://localhost:6379
+# Configuración de la API
+PORT=3000
 
-# Slack (reemplaza con tus tokens)
-SLACK_BOT_TOKEN=xoxb-your-token
-SLACK_SIGNING_SECRET=your-signing-secret
-SLACK_APP_TOKEN=xapp-your-app-token
+# Configuración de Slack
+SLACK_SIGNING_SECRET=tu_signing_secret
+SLACK_BOT_TOKEN=xoxb-tu-bot-token
+SLACK_APP_TOKEN=xapp-tu-app-token
 
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key-here
-
-# Confluence
-CONFLUENCE_HOST=https://your-domain.atlassian.net/wiki
-CONFLUENCE_USERNAME=your-email@teravisiongames.com
-CONFLUENCE_API_TOKEN=your-confluence-api-token-here
-
-# Configuración adicional
-NODE_ENV=development
-LOG_LEVEL=debug
+# Configuración de OpenAI
+OPENAI_API_KEY=tu_api_key
 ```
 
-### 3. Instalar Dependencias
+### Modo Local (Desarrollo)
 
+1. **Clonar el repositorio**:
 ```bash
-# Instalar dependencias del proyecto
+git clone https://github.com/tu-usuario/tg-theguardian.git
+cd tg-theguardian
+```
+
+2. **Instalar dependencias**:
+```bash
 npm install
-
-# Dependencias principales que se instalarán:
-# - @slack/bolt (Framework de Slack)
-# - express (Servidor web)
-# - mongodb (Cliente de MongoDB)
-# - redis (Cliente de Redis)
-# - dotenv (Variables de entorno)
-# - openai (Cliente de OpenAI)
-# - winston (Logging)
-
-# Dependencias de desarrollo:
-# - TypeScript y tipos
-# - ESLint y Prettier
-# - Jest para testing
 ```
 
-### 4. Verificar la Configuración de TypeScript
+3. **Configurar variables de entorno**:
+- Crear archivo `.env.local` basado en el ejemplo anterior
+- Ajustar las URLs de MongoDB y Redis para apuntar a `localhost`
 
-El archivo `tsconfig.json` debe estar presente y configurado. Si no existe, créalo con este contenido:
+4. **Iniciar servicios locales**:
+- Asegurarse de tener MongoDB y Redis instalados localmente
+- Iniciar MongoDB (el comando puede variar según tu instalación)
+- Iniciar Redis (el comando puede variar según tu instalación)
 
-```json
-{
-  "compilerOptions": {
-    "target": "es2022",
-    "module": "commonjs",
-    "lib": ["es2022"],
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
-```
-
-### 5. Configurar ESLint y Prettier
-
-1. Archivo `.eslintrc.js`:
-```javascript
-module.exports = {
-  parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint'],
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended'
-  ],
-  env: {
-    node: true,
-    es2022: true
-  },
-  rules: {
-    // Reglas personalizadas aquí
-  }
-};
-```
-
-2. Archivo `.prettierrc`:
-```json
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": true,
-  "printWidth": 100,
-  "tabWidth": 2
-}
-```
-
-### 6. Estructura de Carpetas
-
-Asegúrate de tener esta estructura básica:
-```
-src/
-├── domain/
-│   ├── models/
-│   ├── services/
-│   └── ports/
-├── application/
-│   └── use-cases/
-├── adapters/
-│   ├── slack/
-│   ├── confluence/
-│   └── persistence/
-├── infrastructure/
-│   ├── server/
-│   ├── config/
-│   └── di/
-├── interfaces/
-│   └── slack/
-└── shared/
-    ├── types/
-    └── errors/
-```
-
-### 7. Verificar Docker
-
-1. Asegúrate de que el archivo `Dockerfile` existe:
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-
-RUN npm run build
-
-CMD ["npm", "run", "dev"]
-```
-
-2. Verifica el archivo `docker-compose.yml`:
-```yaml
-services:
-  app:
-    build: .
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=development
-      - PORT=3001
-    volumes:
-      - ./src:/app/src
-      - ./package.json:/app/package.json
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./.env:/app/.env
-    depends_on:
-      - mongodb
-      - redis
-
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-volumes:
-  mongodb_data:
-  redis_data:
-```
-
-### 8. Scripts NPM Disponibles
-
-En tu `package.json` deberías tener estos scripts:
-```json
-{
-  "scripts": {
-    "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules --exit-child --poll --clear --notify=false src/index.ts",
-    "build": "tsc",
-    "build:clean": "rm -rf dist && tsc",
-    "test": "jest",
-    "lint": "eslint . --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\""
-  }
-}
-```
-
-### 9. Probar la Instalación
-
-1. Construir el proyecto:
+5. **Ejecutar la aplicación**:
 ```bash
-npm run build
+npm run dev:local
 ```
 
-2. Iniciar en modo desarrollo:
+La aplicación estará disponible en `http://localhost:3002`
+
+### Modo Docker (Producción/Staging)
+
+1. **Clonar el repositorio**:
 ```bash
-# Opción 1: Directo con npm
-npm run dev
-
-# Opción 2: Con Docker
-docker-compose up
+git clone https://github.com/tu-usuario/tg-theguardian.git
+cd tg-theguardian
 ```
 
-3. Verificar que:
-- El servidor Express inicia en el puerto 3001
-- La conexión con MongoDB se establece
-- La conexión con Redis se establece
-- El bot de Slack se conecta correctamente
+2. **Configurar variables de entorno**:
+- Crear archivo `.env` basado en el ejemplo anterior
+- Ajustar las URLs de MongoDB y Redis para usar los nombres de servicio de Docker
 
-### 10. Solución de Problemas Comunes
+3. **Construir y ejecutar con Docker Compose**:
+```bash
+# Detener y limpiar contenedores anteriores (si existen)
+docker-compose down -v
 
-1. **Error: Module not found**
-   - Ejecuta `npm install` nuevamente
-   - Verifica que todas las dependencias estén en `package.json`
+# Construir y ejecutar
+docker-compose up --build
+```
 
-2. **Error: Cannot find module 'typescript'**
-   - Instala TypeScript globalmente: `npm install -g typescript`
-   - O usa la versión local: `npx tsc`
+La aplicación estará disponible en `http://localhost:3001`
 
-3. **Error de conexión a MongoDB/Redis**
-   - Verifica que Docker esté corriendo
-   - Comprueba que los puertos no estén en uso
-   - Revisa las variables de entorno
+### Verificación del Despliegue
 
-4. **Errores de TypeScript**
-   - Verifica que `tsconfig.json` esté bien configurado
-   - Asegúrate de tener todos los tipos instalados (@types/*)
+Para verificar que el despliegue fue exitoso:
 
-5. **Errores de ESLint**
-   - Ejecuta `npm run lint -- --fix` para arreglos automáticos
-   - Verifica la configuración en `.eslintrc.js`
+1. **Verificar los logs**:
+- En modo local: Revisar la consola donde se ejecuta la aplicación
+- En modo Docker: `docker-compose logs -f app`
+
+2. **Verificar el endpoint de salud**:
+```bash
+curl http://localhost:3001/health  # Para Docker
+curl http://localhost:3002/health  # Para local
+```
+
+3. **Verificar la conexión con Slack**:
+- Enviar un mensaje directo al bot
+- Usar el comando `/tg-help` en Slack
+
+### Solución de Problemas Comunes
+
+1. **Error de conexión a Redis**:
+- Verificar que Redis esté ejecutándose
+- Confirmar el puerto y host correctos en el archivo .env
+- Para modo local: Asegurarse de que Redis esté instalado
+
+2. **Error de conexión a MongoDB**:
+- Verificar que MongoDB esté ejecutándose
+- Confirmar la URL de conexión en el archivo .env
+- Para modo local: Asegurarse de que MongoDB esté instalado
+
+3. **Problemas con Docker**:
+- Ejecutar `docker-compose down -v` antes de `docker-compose up --build`
+- Verificar que los puertos no estén en uso
+- Revisar los logs con `docker-compose logs -f`
 
 ### Notas Importantes
 
-- Nunca subas el archivo `.env` al repositorio
-- Mantén actualizado el `.gitignore`
-- Documenta cualquier nueva dependencia que agregues
-- Actualiza esta guía si agregas pasos de configuración adicionales
+- El modo local es recomendado para desarrollo y pruebas
+- El modo Docker es recomendado para staging y producción
+- Nunca compartir o commitear archivos .env con credenciales reales
+- Mantener backups regulares de la base de datos en producción
+- Monitorear los logs para detectar problemas temprano
+

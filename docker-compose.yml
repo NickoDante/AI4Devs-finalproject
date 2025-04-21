@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build: .
@@ -6,15 +8,63 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3001
+      - MONGODB_URI=mongodb://mongodb:27017/tg-guardian
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./tsconfig.json:/app/tsconfig.json
       - ./.env:/app/.env
     command: npm run dev
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
     stop_signal: SIGINT
     restart: "no"
     init: true
+
+  mongodb:
+    image: mongo:6.0.13
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    command: mongod --setParameter maxTransactionLockRequestTimeoutMillis=5000
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=
+      - MONGODB_INITDB_ROOT_PASSWORD=
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   mongodb_data:

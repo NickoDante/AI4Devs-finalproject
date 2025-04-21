@@ -28,4 +28,16 @@ export class QueryProcessingError extends BaseError {
     constructor(message: string, context?: ErrorContext) {
         super(message, 422, 'QUERY_PROCESSING_ERROR', context);
     }
+}
+
+export class AuthenticationError extends BaseError {
+    constructor(message: string, context?: ErrorContext) {
+        super(message, 401, 'AUTHENTICATION_ERROR', context);
+    }
+}
+
+export class AuthorizationError extends BaseError {
+    constructor(message: string, context?: ErrorContext) {
+        super(message, 403, 'AUTHORIZATION_ERROR', context);
+    }
 } 

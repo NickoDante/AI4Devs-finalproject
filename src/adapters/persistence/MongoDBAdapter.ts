@@ -1,217 +1,133 @@
-import { MongoClient, Db } from 'mongodb';
+import { Collection, MongoClient, WithId, Document as MongoDocument } from 'mongodb';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
 import { Message } from '../../domain/models/Message';
-import { User } from '../../domain/models/User';
 import { Document } from '../../domain/models/ConfluenceDocument';
+import { User } from '../../domain/models/User';
+import { Logger } from 'winston';
 
 export class MongoDBAdapter implements PersistencePort {
   private client: MongoClient;
-  private db: Db | null = null;
+  private messages!: Collection<Message>;
+  private documents!: Collection<Document>;
+  private users!: Collection<User>;
+  private logger: Logger;
 
-  constructor(uri?: string) {
-    this.client = new MongoClient(uri || process.env.MONGODB_URI || 'mongodb://localhost:27017/tg-guardian');
+  constructor(uri: string, logger: Logger) {
+    this.client = new MongoClient(uri);
+    this.logger = logger;
   }
 
-  // Gestión de mensajes
-  async saveMessage(message: Message): Promise<void> {
-    await this.ensureConnection();
-    await this.db!.collection<Message>('messages').insertOne({
-      ...message,
-      timestamp: new Date()
-    });
-  }
-
-  async getMessageHistory(channel: string, limit: number = 10): Promise<Message[]> {
-    await this.ensureConnection();
-    const messages = await this.db!.collection<Message>('messages')
-      .find({ channel })
-      .sort({ timestamp: -1 })
-      .limit(limit)
-      .toArray();
-
-    return messages;
-  }
-
-  async deleteOldMessages(daysToKeep: number = 30): Promise<void> {
-    await this.ensureConnection();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-    await this.db!.collection('messages').deleteMany({
-      timestamp: { $lt: cutoffDate }
-    });
-  }
-
-  // Gestión de usuarios
-  async saveUser(user: User): Promise<void> {
-    await this.ensureConnection();
-    const now = new Date();
-    await this.db!.collection<User>('users').insertOne({
-      ...user,
-      createdAt: now,
-      updatedAt: now,
-      active: true,
-      isAdmin: false,
-      language: 'es'
-    });
-  }
-
-  async getUser(userId: string): Promise<User | null> {
-    await this.ensureConnection();
-    return this.db!.collection<User>('users').findOne({ 
-      id: userId,
-      active: true 
-    });
-  }
-
-  async updateUser(userId: string, updates: Partial<User>): Promise<void> {
-    await this.ensureConnection();
-    await this.db!.collection<User>('users').updateOne(
-      { id: userId },
-      { 
-        $set: {
-          ...updates,
-          updatedAt: new Date()
-        }
-      }
-    );
-  }
-
-  async deleteUser(userId: string): Promise<void> {
-    await this.ensureConnection();
-    await this.db!.collection<User>('users').updateOne(
-      { id: userId },
-      { 
-        $set: { 
-          active: false,
-          updatedAt: new Date()
-        }
-      }
-    );
-  }
-
-  // Gestión de documentos
-  async saveDocument(document: Document): Promise<void> {
-    await this.ensureConnection();
-    const now = new Date();
-    await this.db!.collection<Document>('documents').insertOne({
-      ...document,
-      createdAt: now,
-      lastUpdated: now,
-      active: true
-    });
-  }
-
-  async getDocument(documentId: string): Promise<Document | null> {
-    await this.ensureConnection();
-    return this.db!.collection<Document>('documents').findOne({ 
-      documentId,
-      active: true 
-    });
-  }
-
-  async searchDocuments(query: string): Promise<Document[]> {
-    await this.ensureConnection();
-    return this.db!.collection<Document>('documents')
-      .find({
-        $and: [
-          { active: true },
-          { $text: { $search: query } }
-        ]
-      })
-      .sort({ score: { $meta: "textScore" } })
-      .toArray();
-  }
-
-  async updateDocument(documentId: string, updates: Partial<Document>): Promise<void> {
-    await this.ensureConnection();
-    await this.db!.collection<Document>('documents').updateOne(
-      { documentId },
-      { 
-        $set: {
-          ...updates,
-          lastUpdated: new Date()
-        }
-      }
-    );
-  }
-
-  async deleteDocument(documentId: string): Promise<void> {
-    await this.ensureConnection();
-    await this.db!.collection<Document>('documents').updateOne(
-      { documentId },
-      { 
-        $set: { 
-          active: false,
-          lastUpdated: new Date()
-        }
-      }
-    );
-  }
-
-  // Métodos de utilidad
   async connect(): Promise<void> {
-    if (!this.db) {
+    try {
       await this.client.connect();
-      this.db = this.client.db();
+      this.logger.info('Connected to MongoDB');
       
-      // Crear índices necesarios
-      await this.createIndices();
+      const db = this.client.db('theguardian');
+      this.messages = db.collection('messages');
+      this.documents = db.collection('documents');
+      this.users = db.collection('users');
+
+      // Crear índices
+      await this.messages.createIndex({ channelId: 1 });
+      await this.messages.createIndex({ userId: 1 });
+      await this.documents.createIndex({ title: 'text', content: 'text' });
+      await this.users.createIndex({ userId: 1 }, { unique: true });
+    } catch (error) {
+      this.logger.error('Error connecting to MongoDB:', error);
+      throw error;
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.client) {
-      await this.client.close();
-      this.db = null;
-    }
+    await this.client.close();
+    this.logger.info('Disconnected from MongoDB');
   }
 
   async healthCheck(): Promise<boolean> {
     try {
-      await this.ensureConnection();
-      await this.db!.command({ ping: 1 });
+      await this.client.db().command({ ping: 1 });
       return true;
     } catch (error) {
-      console.error('MongoDB health check failed:', error);
+      this.logger.error('MongoDB health check failed:', error);
       return false;
     }
   }
 
-  private async ensureConnection(): Promise<void> {
-    if (!this.db) {
-      await this.connect();
-    }
+  // Métodos para mensajes
+  async saveMessage(message: Message): Promise<Message> {
+    const result = await this.messages.insertOne(message);
+    return { ...message, _id: result.insertedId };
   }
 
-  private async createIndices(): Promise<void> {
-    // Índices esenciales para documentos
-    await this.db!.collection('documents').createIndex(
-      { 
-        title: 'text',
-        content: 'text',
-        plainText: 'text'
-      }
-    );
+  async getMessagesByChannel(channelId: string, limit = 100): Promise<Message[]> {
+    return await this.messages
+      .find({ channelId })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .toArray();
+  }
 
-    await this.db!.collection('documents').createIndex(
-      { documentId: 1 },
-      { unique: true }
-    );
+  async getMessagesByUser(userId: string, limit = 100): Promise<Message[]> {
+    return await this.messages
+      .find({ userId })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .toArray();
+  }
 
-    // Índices esenciales para usuarios
-    await this.db!.collection('users').createIndex(
-      { id: 1 },
-      { unique: true }
-    );
-    await this.db!.collection('users').createIndex(
-      { slackId: 1 },
-      { unique: true }
-    );
+  async getMessageById(messageId: string): Promise<Message | null> {
+    return await this.messages.findOne({ id: messageId });
+  }
 
-    // Índices esenciales para mensajes
-    await this.db!.collection('messages').createIndex(
-      { channel: 1, timestamp: -1 }
+  async deleteMessage(messageId: string): Promise<boolean> {
+    const result = await this.messages.deleteOne({ id: messageId });
+    return result.deletedCount > 0;
+  }
+
+  // Métodos para documentos
+  async saveDocument(document: Document): Promise<Document> {
+    const result = await this.documents.insertOne(document);
+    return { ...document, _id: result.insertedId };
+  }
+
+  async getDocumentById(documentId: string): Promise<Document | null> {
+    return await this.documents.findOne({ id: documentId });
+  }
+
+  async getDocuments(filter: Partial<Document> = {}): Promise<Document[]> {
+    return await this.documents.find(filter).toArray();
+  }
+
+  async deleteDocument(documentId: string): Promise<boolean> {
+    const result = await this.documents.deleteOne({ id: documentId });
+    return result.deletedCount > 0;
+  }
+
+  // Métodos para usuarios
+  async saveUser(user: User): Promise<User> {
+    const result = await this.users.insertOne(user);
+    return { ...user, _id: result.insertedId };
+  }
+
+  async findUserById(userId: string): Promise<User | null> {
+    return await this.users.findOne({ userId });
+  }
+
+  async getUsers(filter: Partial<User> = {}): Promise<User[]> {
+    return await this.users.find(filter).toArray();
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    const result = await this.users.deleteOne({ userId });
+    return result.deletedCount > 0;
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<User | null> {
+    const result = await this.users.findOneAndUpdate(
+      { userId },
+      { $set: updates },
+      { returnDocument: 'after' }
     );
+    return result ? (result as unknown as MongoDocument).value as User : null;
   }
 } 

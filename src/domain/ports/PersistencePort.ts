@@ -3,23 +3,25 @@ import { User } from '../models/User';
 import { Document } from '../models/ConfluenceDocument';
 
 export interface PersistencePort {
-  // Gestión de mensajes
-  saveMessage(message: Message): Promise<void>;
-  getMessageHistory(channel: string, limit?: number): Promise<Message[]>;
-  deleteOldMessages(daysToKeep?: number): Promise<void>;
+  // Métodos para mensajes
+  saveMessage(message: Message): Promise<Message>;
+  getMessagesByChannel(channelId: string, limit?: number): Promise<Message[]>;
+  getMessagesByUser(userId: string, limit?: number): Promise<Message[]>;
+  getMessageById(messageId: string): Promise<Message | null>;
+  deleteMessage(messageId: string): Promise<boolean>;
 
-  // Gestión de usuarios
-  saveUser(user: User): Promise<void>;
-  getUser(userId: string): Promise<User | null>;
-  updateUser(userId: string, updates: Partial<User>): Promise<void>;
-  deleteUser(userId: string): Promise<void>;
+  // Métodos para documentos
+  saveDocument(document: Document): Promise<Document>;
+  getDocumentById(documentId: string): Promise<Document | null>;
+  getDocuments(filter?: Partial<Document>): Promise<Document[]>;
+  deleteDocument(documentId: string): Promise<boolean>;
 
-  // Gestión de documentos
-  saveDocument(document: Document): Promise<void>;
-  getDocument(documentId: string): Promise<Document | null>;
-  searchDocuments(query: string): Promise<Document[]>;
-  updateDocument(documentId: string, updates: Partial<Document>): Promise<void>;
-  deleteDocument(documentId: string): Promise<void>;
+  // Métodos para usuarios
+  saveUser(user: User): Promise<User>;
+  findUserById(userId: string): Promise<User | null>;
+  getUsers(filter?: Partial<User>): Promise<User[]>;
+  deleteUser(userId: string): Promise<boolean>;
+  updateUser(userId: string, updates: Partial<User>): Promise<User | null>;
 
   // Métodos de utilidad
   connect(): Promise<void>;

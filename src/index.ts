@@ -1,17 +1,35 @@
 import 'dotenv/config';
-import { SlackAdapter } from './adapters/slack/SlackAdapter';
+import logger from './infrastructure/logging/Logger';
+import { container, AppConfig } from './infrastructure/di/index';
 
 async function bootstrap() {
   try {
-    console.log('🚀 Iniciando prueba de conexión con Slack...');
+    console.log('🚀 Iniciando The Guardian...');
 
-    const slackAdapter = new SlackAdapter();
-    await slackAdapter.start(3001);
+    // Configuración de la aplicación
+    const config: AppConfig = {
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB || '0')
+      }
+    };
+
+    // Inicializar el contenedor de dependencias
+    await container.initialize({
+      mongoUri: process.env.MONGODB_URI,
+      redisConfig: config.redis,
+      openAiKey: process.env.OPENAI_API_KEY,
+      slackPort: 3001
+    });
+
+    logger.info('✅ Aplicación iniciada correctamente');
 
   } catch (error: any) {
-    console.error('❌ Error durante el inicio de la aplicación:', error?.message || 'Error desconocido');
+    logger.error('❌ Error durante el inicio de la aplicación:', error?.message || 'Error desconocido');
     if (error?.stack) {
-      console.error('Stack trace:', error.stack);
+      logger.error('Stack trace:', error.stack);
     }
     process.exit(1);
   }
@@ -19,12 +37,12 @@ async function bootstrap() {
 
 // Manejar el cierre gracioso de la aplicación
 process.on('SIGTERM', () => {
-  console.log('👋 Cerrando la aplicación...');
+  logger.info('👋 Cerrando la aplicación...');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('👋 Cerrando la aplicación...');
+  logger.info('👋 Cerrando la aplicación...');
   process.exit(0);
 });
 

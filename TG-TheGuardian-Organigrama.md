@@ -73,10 +73,10 @@ Etapa 1
   y autorización necesarios, junto con la implementación de
   validaciones robustas para todas las interacciones del sistema.
 * Objetivos:
-- ( ) Implementar autenticación básica con Slack
-- ( ) Crear middleware de validación de requests
-- ( ) Configurar sistema de caché con Redis
-- ( ) Implementar healthchecks básicos
+- (✅) Implementar autenticación básica con Slack
+- (✅) Crear middleware de validación de requests
+- (✅) Configurar sistema de caché con Redis
+- (✅) Implementar healthchecks básicos
 
 * Miércoles 30 de Abril, 2025
 * Semana #2

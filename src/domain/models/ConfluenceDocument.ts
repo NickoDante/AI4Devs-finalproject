@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+
 export interface ConfluenceDocument {
   // Campos esenciales
   documentId: string;
@@ -15,4 +17,4 @@ export interface ConfluenceDocument {
 }
 
 // Alias para mantener compatibilidad
-export type Document = ConfluenceDocument; 
+export type Document = ConfluenceDocument & { _id?: ObjectId }; 

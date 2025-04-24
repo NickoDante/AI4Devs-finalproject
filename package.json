@@ -7,10 +7,20 @@
     "start": "node dist/index.js",
     "dev:local": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only src/index.ts --env-file=.env.local",
     "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev:script": "powershell -ExecutionPolicy Bypass -File .\\scripts\\dev.ps1",
     "build": "tsc",
+    "build:clean": "powershell -ExecutionPolicy Bypass -File .\\scripts\\build.ps1",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "test": "jest"
+    "test": "jest",
+    "test:integration": "jest src/tests/integration",
+    "test:mongodb": "jest src/tests/integration/mongodb",
+    "test:redis": "jest src/tests/integration/redis",
+    "test:slack": "jest src/tests/integration/slack",
+    "test:help": "powershell -ExecutionPolicy Bypass -File .\\scripts\\test.ps1 --help",
+    "test:script": "powershell -ExecutionPolicy Bypass -File .\\scripts\\test.ps1",
+    "test:unit": "jest --testPathIgnorePatterns=integration",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@slack/bolt": "^3.17.1",
@@ -35,6 +45,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.4",
     "ts-jest": "^29.1.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"

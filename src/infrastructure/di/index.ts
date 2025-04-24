@@ -2,7 +2,7 @@ import { MongoDBAdapter } from '../../adapters/persistence/MongoDBAdapter';
 import { OpenAIAdapter } from '../../adapters/llm/OpenAIAdapter';
 import { SlackAdapter } from '../../adapters/slack/SlackAdapter';
 import { RedisAdapter } from '../../adapters/cache/RedisAdapter';
-import { ProcessMessageUseCase } from '../../application/use-cases/ProcessMessageUseCase';
+import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { MessagePort } from '../../domain/ports/MessagePort';
 import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
@@ -63,7 +63,7 @@ export class DependencyContainer {
         slackPort?: number;
     } = {}): Promise<void> {
         try {
-            console.log('🚀 Iniciando contenedor de dependencias...');
+            this.services.logger.info('🚀 Iniciando contenedor de dependencias...');
 
             // Inicializar Redis
             if (config.redisConfig) {
@@ -87,14 +87,14 @@ export class DependencyContainer {
 
             // Iniciar servicios que requieren conexión
             await this.services.messaging.start(config.slackPort || 3000);
-            console.log('⚡️ Servicio de mensajería inicializado');
+            this.services.logger.info('⚡️ Servicio de mensajería inicializado');
 
             // Verificar conexiones
             await this.checkConnections();
 
-            console.log('✅ Contenedor de dependencias inicializado correctamente');
+            this.services.logger.info('✅ Contenedor de dependencias inicializado correctamente');
         } catch (error) {
-            console.error('❌ Error durante la inicialización:', error);
+            this.services.logger.error('❌ Error durante la inicialización:', error);
             throw error;
         }
     }
@@ -104,14 +104,14 @@ export class DependencyContainer {
             // Verificar MongoDB
             if ('healthCheck' in this.services.persistence) {
                 const mongoHealth = await (this.services.persistence as MongoDBAdapter).healthCheck();
-                console.log('💾 MongoDB health check:', mongoHealth ? '✅' : '❌');
+                this.services.logger.info('💾 MongoDB health check:', mongoHealth ? '✅' : '❌');
             }
 
             // No necesitamos verificar Slack porque ya se verifica en el start()
-            console.log('🤖 Slack está listo para recibir mensajes');
+            this.services.logger.info('🤖 Slack está listo para recibir mensajes');
 
         } catch (error) {
-            console.error('❌ Error en health check:', error);
+            this.services.logger.error('❌ Error en health check:', error);
             throw error;
         }
     }

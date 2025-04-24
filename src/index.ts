@@ -1,10 +1,15 @@
 import 'dotenv/config';
 import logger from './infrastructure/logging/Logger';
 import { container, AppConfig } from './infrastructure/di/index';
+import { UncaughtErrorMiddleware } from './infrastructure/middleware/UncaughtErrorMiddleware';
+
+// Inicializar manejo de errores no capturados
+const uncaughtErrorMiddleware = new UncaughtErrorMiddleware(logger);
+uncaughtErrorMiddleware.initialize();
 
 async function bootstrap() {
   try {
-    console.log('🚀 Iniciando The Guardian...');
+    logger.info('🚀 Iniciando The Guardian...');
 
     // Configuración de la aplicación
     const config: AppConfig = {

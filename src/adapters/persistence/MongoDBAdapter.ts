@@ -61,7 +61,7 @@ export class MongoDBAdapter implements PersistencePort {
 
   async getMessagesByChannel(channelId: string, limit = 100): Promise<Message[]> {
     return await this.messages
-      .find({ channelId })
+      .find({ channel: channelId })
       .sort({ timestamp: -1 })
       .limit(limit)
       .toArray();

@@ -1823,3 +1823,621 @@ curl http://localhost:3002/health  # Para local
 - Mantener backups regulares de la base de datos en producción
 - Monitorear los logs para detectar problemas temprano
 
+## Guía de Inicio y Configuración
+
+### Variables de Entorno
+
+El proyecto utiliza diferentes archivos de configuración según el entorno:
+
+#### `.env` (Configuración principal)
+Contiene variables de entorno para el entorno de producción o contenedores Docker.
+
+```bash
+# Configuración del servidor
+PORT=3001
+NODE_ENV=development
+LOG_LEVEL=debug
+
+# MongoDB
+MONGODB_URI=mongodb://mongodb:27017/tg-guardian
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Slack
+SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_SIGNING_SECRET=your-signing-secret
+SLACK_APP_TOKEN=xapp-your-app-token
+
+# OpenAI
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-3.5-turbo
+
+# Confluence
+CONFLUENCE_HOST=https://your-domain.atlassian.net/wiki
+CONFLUENCE_USERNAME=your-email@teravisiongames.com
+CONFLUENCE_API_TOKEN=your-confluence-api-token-here
+CONFLUENCE_SPACE_KEY=your-space-key-here
+
+# Seguridad
+JWT_SECRET=your-jwt-secret-here
+SESSION_SECRET=your-session-secret-here
+ENCRYPTION_KEY=your-encryption-key-here
+```
+
+#### `.env.example` (Para repositorios)
+Plantilla para que los desarrolladores puedan crear su propio archivo `.env` sin exponer credenciales reales.
+
+```bash
+# Configuración del servidor
+PORT=3000
+NODE_ENV=development
+LOG_LEVEL=debug
+
+# MongoDB
+MONGODB_URI=mongodb://localhost:27017/tg-guardian
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Slack
+SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_SIGNING_SECRET=your-signing-secret
+SLACK_APP_TOKEN=xapp-your-app-token
+
+# OpenAI
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-3.5-turbo
+
+# Confluence
+CONFLUENCE_HOST=https://your-domain.atlassian.net/wiki
+CONFLUENCE_USERNAME=your-email@teravisiongames.com
+CONFLUENCE_API_TOKEN=your-confluence-api-token-here
+CONFLUENCE_SPACE_KEY=your-space-key-here
+
+# Seguridad
+JWT_SECRET=your-jwt-secret-here
+SESSION_SECRET=your-session-secret-here
+ENCRYPTION_KEY=your-encryption-key-here
+```
+
+#### `.env.local` (Para desarrollo local)
+Configuración para entorno de desarrollo local.
+
+```bash
+# Configuración del servidor
+PORT=3002
+NODE_ENV=development
+LOG_LEVEL=debug
+
+# MongoDB
+MONGODB_URI=mongodb://localhost:27017/tg-guardian-dev
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6380
+REDIS_PASSWORD=
+REDIS_DB=1
+
+# Slack
+SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_SIGNING_SECRET=your-signing-secret
+SLACK_APP_TOKEN=xapp-your-app-token
+
+# OpenAI
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-3.5-turbo
+
+# Confluence
+CONFLUENCE_HOST=https://your-domain.atlassian.net/wiki
+CONFLUENCE_USERNAME=your-email@teravisiongames.com
+CONFLUENCE_API_TOKEN=your-confluence-api-token-here
+CONFLUENCE_SPACE_KEY=your-space-key-here
+
+# Seguridad
+JWT_SECRET=your-jwt-secret-here
+SESSION_SECRET=your-session-secret-here
+ENCRYPTION_KEY=your-encryption-key-here
+```
+
+### Configuración de Docker
+
+El proyecto está configurado para ser desplegado utilizando Docker y Docker Compose. Los principales archivos de configuración son:
+
+#### `Dockerfile`
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+EXPOSE 3001
+
+CMD ["npm", "start"]
+```
+
+#### `docker-compose.yml`
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongodb
+      - redis
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongodb_data:
+  redis_data:
+```
+
+### Guía de Instalación Rápida
+
+Sigue estos pasos para tener el proyecto funcionando:
+
+#### Requisitos Previos
+
+- Node.js 18 o superior
+- npm 7 o superior
+- Docker y Docker Compose (opcional, para instalación con Docker)
+- Git
+
+#### Instalación Local
+
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/teravisiongames/tg-theguardian.git
+   cd tg-theguardian
+   ```
+
+2. Crea un archivo `.env.local` a partir del ejemplo:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Edita este archivo con tus credenciales.
+
+3. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+
+4. Inicia la aplicación en modo desarrollo:
+   ```bash
+   npm run dev:local
+   ```
+
+5. La aplicación estará disponible en `http://localhost:3002`.
+
+#### Instalación con Docker
+
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/teravisiongames/tg-theguardian.git
+   cd tg-theguardian
+   ```
+
+2. Crea un archivo `.env` a partir del ejemplo:
+   ```bash
+   cp .env.example .env
+   ```
+   Edita este archivo con tus credenciales.
+
+3. Construye y ejecuta con Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
+
+4. La aplicación estará disponible en `http://localhost:3001`.
+
+#### Verificación de la Instalación
+
+Para comprobar que todo está funcionando correctamente:
+
+1. Accede al endpoint de salud:
+   ```bash
+   # Para instalación local
+   curl http://localhost:3002/health
+
+   # Para instalación con Docker
+   curl http://localhost:3001/health
+   ```
+
+2. Deberías ver un mensaje de estado indicando que todos los componentes están operativos.
+
+#### Ejecución de Pruebas
+
+Para ejecutar las pruebas del proyecto:
+
+```bash
+# Todas las pruebas
+npm test
+
+# Pruebas de integración
+npm run test:integration
+
+# Pruebas específicas de MongoDB
+npm run test:mongodb
+
+# Pruebas específicas de Redis
+npm run test:redis
+
+# Pruebas específicas de Slack
+npm run test:slack
+```
+
+#### Solución de Problemas Comunes
+
+- **Error de conexión a MongoDB/Redis**: Verifica que los servicios estén en ejecución y que las credenciales en los archivos `.env` sean correctas.
+  
+- **Error en la integración con Slack**: Confirma que los tokens en el archivo `.env` sean válidos y tengan los permisos necesarios.
+
+- **Problemas con Docker**: Intenta reiniciar los contenedores con `docker-compose down` seguido de `docker-compose up --build`.
+
+- **Errores en la API de OpenAI**: Verifica que la clave API sea válida y que tenga saldo disponible.
+
+## Proceso de Despliegue
+
+Esta sección detalla el proceso completo de despliegue del proyecto TG: The Guardian, incluyendo CI/CD, ambientes, estrategias de versión y monitoreo.
+
+### Flujo de CI/CD
+
+El proyecto implementa un flujo de Integración Continua y Despliegue Continuo utilizando GitHub Actions:
+
+```yaml
+# .github/workflows/ci-cd.yml
+name: TG-TheGuardian CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run linter
+        run: npm run lint
+      - name: Run tests
+        run: npm test
+
+  build-and-deploy:
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build project
+        run: npm run build
+      
+      # Determinación del ambiente basado en la rama
+      - name: Set environment
+        id: set-env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "::set-output name=env::production"
+          else
+            echo "::set-output name=env::staging"
+          fi
+      
+      # Configuración de Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      # Login al registro de Docker
+      - name: Login to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      # Construcción y push de la imagen
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_REGISTRY }}/tg-theguardian:${{ steps.set-env.outputs.env }}-${{ github.sha }},${{ secrets.DOCKER_REGISTRY }}/tg-theguardian:${{ steps.set-env.outputs.env }}-latest
+      
+      # Despliegue a Kubernetes
+      - name: Deploy to Kubernetes
+        uses: steebchen/kubectl@v2
+        with:
+          config: ${{ secrets.KUBE_CONFIG_DATA }}
+          command: set image deployment/tg-theguardian tg-theguardian=${{ secrets.DOCKER_REGISTRY }}/tg-theguardian:${{ steps.set-env.outputs.env }}-${{ github.sha }} --namespace=${{ steps.set-env.outputs.env }}
+      
+      # Verificar despliegue
+      - name: Verify deployment
+        uses: steebchen/kubectl@v2
+        with:
+          config: ${{ secrets.KUBE_CONFIG_DATA }}
+          command: rollout status deployment/tg-theguardian --namespace=${{ steps.set-env.outputs.env }}
+```
+
+### Ambientes de Despliegue
+
+El proyecto utiliza tres ambientes principales:
+
+#### 1. Desarrollo (Development)
+- **Propósito**: Para desarrollo y pruebas locales o en entorno aislado
+- **Rama Git**: feature/* (ramas de características)
+- **URL**: N/A (local) o dev.theguardian.teravisiongames.com
+- **Variables de entorno**: `.env.local`
+- **Base de datos**: Instancias locales o de desarrollo
+
+#### 2. Staging
+- **Propósito**: Para QA, pruebas de integración y validación pre-producción
+- **Rama Git**: develop
+- **URL**: staging.theguardian.teravisiongames.com
+- **Variables de entorno**: `.env.staging`
+- **Base de datos**: Instancias separadas para staging
+- **Slack**: Conectado a un canal de pruebas (#tg-guardian-test)
+
+#### 3. Producción (Production)
+- **Propósito**: Ambiente de producción para usuarios finales
+- **Rama Git**: main
+- **URL**: theguardian.teravisiongames.com
+- **Variables de entorno**: `.env.production`
+- **Base de datos**: Instancias de producción con backups automáticos
+- **Slack**: Conectado al canal principal (#tg-guardian)
+
+### Estrategia de Versionado
+
+El proyecto sigue Semantic Versioning (SemVer):
+
+- **Mayor (X.0.0)**: Cambios incompatibles con versiones anteriores
+- **Menor (0.X.0)**: Funcionalidades nuevas compatibles con versiones anteriores
+- **Patch (0.0.X)**: Correcciones de errores compatibles con versiones anteriores
+
+Las versiones se etiquetan en Git mediante tags:
+
+```bash
+# Ejemplo para la versión 1.2.3
+git tag -a v1.2.3 -m "Release version 1.2.3"
+git push origin v1.2.3
+```
+
+### Procedimiento de Despliegue Manual
+
+En caso de necesitar un despliegue manual, seguir estos pasos:
+
+1. **Preparación**:
+   ```bash
+   # Asegurarse de estar en la rama correcta
+   git checkout [main|develop]
+   
+   # Obtener los últimos cambios
+   git pull origin [main|develop]
+   ```
+
+2. **Construcción**:
+   ```bash
+   # Instalar dependencias
+   npm ci
+   
+   # Construir el proyecto
+   npm run build
+   ```
+
+3. **Construcción y etiquetado de Docker**:
+   ```bash
+   # Construcción de la imagen
+   docker build -t tg-theguardian:[env]-[version] .
+   
+   # Etiquetar la imagen
+   docker tag tg-theguardian:[env]-[version] [registry]/tg-theguardian:[env]-[version]
+   docker tag tg-theguardian:[env]-[version] [registry]/tg-theguardian:[env]-latest
+   
+   # Subir la imagen
+   docker push [registry]/tg-theguardian:[env]-[version]
+   docker push [registry]/tg-theguardian:[env]-latest
+   ```
+
+4. **Despliegue en servidor**:
+   ```bash
+   # Actualizar la imagen en el servidor
+   ssh [user]@[server] "cd /path/to/deployment && docker-compose pull && docker-compose up -d"
+   ```
+
+### Procedimiento de Rollback
+
+En caso de detectar problemas después de un despliegue:
+
+1. **Identificar la última versión estable**:
+   ```bash
+   # Listar tags recientes
+   git tag -l --sort=-creatordate | head -n 5
+   ```
+
+2. **Rollback en el servidor**:
+   ```bash
+   # Especificar la versión anterior estable
+   ssh [user]@[server] "cd /path/to/deployment && docker-compose down && export TAG=[previous-stable-tag] && docker-compose up -d"
+   ```
+
+3. **Rollback en Kubernetes** (si aplica):
+   ```bash
+   kubectl rollout undo deployment/tg-theguardian --namespace=[env]
+   ```
+
+4. **Registro del incidente**:
+   - Documentar la razón del rollback
+   - Crear issue para la corrección
+   - Planificar el re-despliegue después de la corrección
+
+### Monitoreo Post-Despliegue
+
+Después de cada despliegue, se realizan las siguientes verificaciones:
+
+1. **Verificación de Estado**:
+   ```bash
+   # Verificar el endpoint de salud
+   curl https://[domain]/health
+   ```
+
+2. **Revisión de Logs**:
+   ```bash
+   # En servidor con Docker
+   docker logs -f tg-theguardian
+   
+   # En Kubernetes
+   kubectl logs -f deployment/tg-theguardian -n [namespace]
+   ```
+
+3. **Pruebas Funcionales Mínimas**:
+   - Verificar la conexión con Slack enviando un mensaje de prueba
+   - Comprobar al menos una función de búsqueda
+   - Verificar respuestas administrativas
+
+4. **Monitoreo de Métricas**:
+   - Revisión de métricas en el dashboard (CPU, memoria, tiempo de respuesta)
+   - Alertas configuradas para umbrales críticos
+
+### Integración con Slack para Notificaciones de Despliegue
+
+El sistema notifica automáticamente en un canal de Slack dedicado cada vez que ocurre un despliegue:
+
+```yaml
+# Paso adicional en el workflow de CI/CD
+- name: Notify Slack on Success
+  if: success()
+  uses: rtCamp/action-slack-notify@v2
+  env:
+    SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    SLACK_CHANNEL: '#deploys'
+    SLACK_TITLE: 'Despliegue exitoso :rocket:'
+    SLACK_MESSAGE: 'TG-TheGuardian v${{ github.ref }} desplegado en ${{ steps.set-env.outputs.env }}'
+    SLACK_COLOR: 'good'
+
+- name: Notify Slack on Failure
+  if: failure()
+  uses: rtCamp/action-slack-notify@v2
+  env:
+    SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    SLACK_CHANNEL: '#deploys'
+    SLACK_TITLE: 'Despliegue fallido :x:'
+    SLACK_MESSAGE: 'El despliegue de TG-TheGuardian v${{ github.ref }} ha fallado'
+    SLACK_COLOR: 'danger'
+```
+
+### Escalamiento y Alta Disponibilidad
+
+Para entornos de producción, la aplicación se configura para escalar horizontalmente:
+
+#### Configuración de Kubernetes (producción)
+
+```yaml
+# kubernetes/production/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tg-theguardian
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tg-theguardian
+  template:
+    metadata:
+      labels:
+        app: tg-theguardian
+    spec:
+      containers:
+      - name: tg-theguardian
+        image: [registry]/tg-theguardian:production-latest
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        env:
+          - name: NODE_ENV
+            value: "production"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tg-theguardian-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tg-theguardian
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+```
+
+Este sistema permite que la aplicación escale automáticamente cuando aumenta la carga, garantizando alta disponibilidad y rendimiento óptimo.
+

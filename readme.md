@@ -66,8 +66,91 @@ Esta característica permite a los miembros del equipo obtener rápidamente la e
 
 ### **1.4. Instrucciones de instalación:**
 
-<!-- Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
-** 28 - Abril - 2025 ** -->
+#### Software necesario
+- **Node.js**: versión 18.x o superior
+- **MongoDB**: versión 6.0 o superior
+- **Redis**: versión 6.0 o superior
+- **Git**: para clonar el repositorio
+- **Docker** (opcional): si se desea ejecutar con contenedores
+
+#### Credenciales necesarias
+- **Slack API**: Bot Token, Signing Secret y App Token
+- **OpenAI API**: Clave para acceso a los modelos de IA (opcional)
+- **Confluence API**: Credenciales para acceso a la documentación (opcional)
+
+#### Instalación en entorno local
+
+##### 1. Clonar el repositorio
+```bash
+git clone https://github.com/NickoDante/AI4Devs-finalproject.git
+cd AI4Devs-finalproject
+```
+
+##### 2. Configurar variables de entorno
+Copiar el archivo de ejemplo y configurar las variables necesarias:
+```bash
+cp .env.example .env.local
+```
+
+Edita el archivo `.env.local` con tus credenciales y configuración:
+- Configuración del servidor: `PORT`, `NODE_ENV`, `LOG_LEVEL`
+- Configuración de MongoDB: `MONGODB_URI`
+- Configuración de Redis: `REDIS_HOST`, `REDIS_PORT`
+- Credenciales de Slack: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN`
+- Credenciales de OpenAI (opcional): `OPENAI_API_KEY`, `OPENAI_MODEL`
+- Configuración de Confluence (opcional): `CONFLUENCE_HOST`, `CONFLUENCE_USERNAME`, etc.
+
+##### 3. Instalar dependencias
+```bash
+npm install
+```
+
+##### 4. Iniciar servicios locales (MongoDB y Redis)
+
+###### Opción 1: Usando script de utilidad (Windows)
+```
+TG-Guardian_SlackBot_Test(Local-StartServices).bat
+```
+
+###### Opción 2: Iniciar manualmente
+- Iniciar MongoDB en puerto 27017
+- Iniciar Redis en puerto 6379
+
+##### 5. Ejecutar la aplicación en modo desarrollo
+```bash
+npm run dev:local
+```
+
+O usando el script de utilidad:
+```bash
+npm run dev:script
+```
+
+#### Instalación con Docker
+
+##### 1. Clonar el repositorio y configurar variables de entorno
+```bash
+git clone https://github.com/NickoDante/AI4Devs-finalproject.git
+cd AI4Devs-finalproject
+cp .env.example .env
+```
+
+Edita el archivo `.env` con tu configuración para Docker.
+
+##### 2. Iniciar los contenedores
+```bash
+docker-compose up -d
+```
+
+Esto iniciará:
+- Aplicación Node.js en el puerto 3001
+- MongoDB en el puerto 27017
+- Redis en el puerto 6379
+
+##### 3. Verificar el funcionamiento
+```bash
+docker-compose logs -f app
+```
 
 ---
 
@@ -231,44 +314,37 @@ graph TD
 #### Estructura de Ficheros
 ```
 tg-the-guardian/
+├── scripts/                # Scripts de despliegue, CLI, utilidades
 ├── src/
-│   ├── domain/                 # Núcleo del sistema (negocio puro, sin dependencias externas)
-│   │   ├── models/             # Entidades y value objects (ej: Query, Document, Summary)
-│   │   ├── services/           # Lógica de negocio (ej: interprete de intenciones)
-│   │   └── ports/              # Interfaces (puertos) que define el dominio
-│
-│   ├── application/            # Casos de uso / orquestadores
-│   │   └── use-cases/          # Coordinan lógica de dominio y puertos
-│
-│   ├── adapters/               # Adaptadores que implementan los puertos definidos en dominio
-│   │   ├── slack/              # Adaptador para Slack API
-│   │   ├── confluence/         # Adaptador para Confluence
-│   │   ├── llm/                # Adaptador para OpenAI / Claude / Llama
-│   │   ├── persistence/        # MongoDB
-│   │   └── utils/              # Adaptadores auxiliares (logs, helpers, etc.)
-│
-│   ├── infrastructure/         # Inicialización, configuración e integración
-│   │   ├── server/             # Configuración del servidor y enrutadores
-│   │   ├── config/             # Variables de entorno, settings
-│   │   └── di/                 # Inyección de dependencias (IoC Container)
-│
-│   ├── interfaces/             # Interfaces de entrada: Slack, Web UI (si aplica)
-│   │   └── slack/              # Controladores de comandos Slack (slash, DM)
-│
-│   └── shared/                 # Tipos comunes, errores, constantes
-│       ├── types/              # Tipado compartido entre capas
-│       └── errors/             # Manejo de errores estructurado
-│
-├── tests/                      # Tests unitarios e integración
-│   ├── domain/
-│   ├── adapters/
-│   └── use-cases/
-│
-├── public/                     # Archivos estáticos (si aplica, para panel admin)
-├── scripts/                    # Scripts de despliegue, CLI, utilidades
-├── .env                        # Variables de entorno
-├── Dockerfile                  # Contenedor del bot
-├── docker-compose.yml          # Orquestación de contenedores
+  ├── adapters/                # Implementaciones concretas de los puertos
+  │   ├── auth/                   # Adaptadores de autenticación
+  │   ├── cache/                  # Adaptadores para caché (Redis)
+  │   ├── confluence/             # Adaptadores para Confluence
+  │   ├── llm/                    # Adaptadores para modelos de lenguaje
+  │   ├── persistence/            # Adaptadores de persistencia (MongoDB)
+  │   └── slack/                  # Adaptadores para Slack
+  ├── application/            # Capa de aplicación (casos de uso)
+  │   └── use-cases/            # Implementación de la lógica de negocio
+  │       ├── message/            # Casos de uso relacionados con mensajes
+  │       ├── conversation/       # Casos de uso para gestión de conversaciones
+  │       └── knowledge/          # Casos de uso relacionados con conocimiento
+  ├── config/                 # Configuraciones de la aplicación
+  ├── domain/                 # Capa de dominio (modelos y puertos)
+  │   ├── models/               # Entidades y objetos de valor
+  │   └── ports/                # Interfaces que definen las operaciones
+  ├── infrastructure/         # Componentes técnicos y configuración
+  │   ├── cache/                # Configuración de caché
+  │   ├── di/                   # Inyección de dependencias
+  │   ├── errors/               # Manejo de errores
+  │   ├── logging/              # Configuración de logs
+  │   └── middleware/           # Middlewares de la aplicación
+  ├── tests/                  # Pruebas unitarias e integración
+  │   ├── integration/          # Pruebas de integración
+  │   └── mocks/                # Objetos mock para pruebas
+  └── index.ts                # Punto de entrada de la aplicación
+├── .env                    # Variables de entorno
+├── Dockerfile              # Contenedor del bot
+├── docker-compose.yml      # Orquestación de contenedores
 ├── package.json
 └── README.md
 ```
@@ -393,42 +469,108 @@ flowchart TD
 
 #### Proceso de Despliegue
 
-1. Preparación del Entorno (Semana 1)
-- Configuración de repositorio: Inicialización del proyecto con estructura de carpetas según arquitectura hexagonal
-- Configuración de contenedores Docker: Creación de Dockerfile y docker-compose para desarrollo local
-- Configuración de variables de entorno: Para separar credenciales y configuraciones del código
+##### Requisitos previos
 
-2. Desarrollo Incremental por Componentes (Semanas 2-5)
-El despliegue se realiza mediante integración continua utilizando un enfoque de desarrollo por componentes:
+###### Requisitos de hardware
+- **Servidor de producción**: 
+  - 2 CPU cores mínimo (4 recomendado)
+  - 4GB RAM mínimo (8GB recomendado)
+  - 20GB de almacenamiento (SSD recomendado)
+- **Servicios de base de datos**:
+  - MongoDB: 2GB RAM mínimo
+  - Redis: 1GB RAM mínimo
 
-* Adaptador de Slack: Prioridad alta - Es el punto de entrada para los usuarios
-	- Configuración de la App en Slack
-	- Implementación de webhook para recibir mensajes
-	- Desarrollo de comandos básicos de Slack (/tg-search, /tg-admin, /tg-summary)
+###### Software necesario
+- Docker y Docker Compose
+- Node.js 18.x (solo para despliegue sin Docker)
+- Git
 
-* Servicio Central (Core): Componente crítico - Implementa la lógica de negocio
-	- Despliegue del dominio central que coordina los casos de uso
-	- Implementación de los puertos definidos en la arquitectura hexagonal
+##### Opciones de despliegue
 
-* Adaptadores de Servicios Externos:
-	- Implementación del adaptador de Confluence para acceso a documentación
-	- Configuración del adaptador LLM para procesamiento de lenguaje natural
-	- Conexión con bases de datos (MongoDB, Redis, VectorDB)
+TG-TheGuardian ofrece varias opciones de despliegue según las necesidades del entorno:
 
-3. Despliegue a Entorno de Staging (Semana 6)
-- Configuración de infraestructura cloud mediante IaC (Infrastructure as Code)
-- Despliegue de bases de datos y servicios en entorno de staging
-- Implementación de pruebas de integración automatizadas
+###### 1. Despliegue con Docker (recomendado)
 
-4. Pruebas y Optimización (Semanas 7-8)
-- Pruebas de carga para verificar rendimiento bajo demanda
-- Afinación de configuraciones para optimizar respuesta
-- Corrección de errores y ajustes finales
+El despliegue con Docker es la opción más sencilla y recomendada. Proporciona un entorno aislado y consistente.
 
-5. Despliegue a Producción (Semana 9)
-- Migración controlada a entorno de producción
-- Configuración de monitoreo y alertas
-- Documentación final del sistema y entrega
+####### Pasos para despliegue en entorno local o desarrollo
+
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/NickoDante/AI4Devs-finalproject.git
+cd AI4Devs-finalproject
+```
+
+2. Configurar variables de entorno:
+```bash
+cp .env.example .env
+```
+   Editar el archivo `.env` con la configuración adecuada.
+
+3. Iniciar los contenedores:
+```bash
+docker-compose up -d
+```
+
+4. Verificar el despliegue:
+```bash
+docker-compose ps
+docker-compose logs -f app
+```
+
+####### Pasos para despliegue en entorno de producción
+
+1. Clonar el repositorio en el servidor:
+```bash
+git clone https://github.com/NickoDante/AI4Devs-finalproject.git
+cd AI4Devs-finalproject
+```
+
+2. Configurar variables de entorno para producción:
+```bash
+cp .env.example .env.production
+```
+   Editar el archivo `.env.production` con la configuración adecuada.
+
+3. Construir e iniciar los contenedores:
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+4. Configurar un proxy inverso (Nginx/Apache) para gestionar el tráfico HTTPS.
+
+###### 2. Despliegue manual (sin Docker)
+
+El despliegue manual requiere la instalación directa de todas las dependencias en el servidor.
+
+#### Pasos para despliegue manual
+
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/NickoDante/AI4Devs-finalproject.git
+cd AI4Devs-finalproject
+```
+
+2. Instalar dependencias:
+```bash
+npm install --production
+```
+
+3. Configurar variables de entorno:
+```bash
+cp .env.example .env.production
+```
+   Editar el archivo `.env.production` con la configuración adecuada.
+
+4. Construir la aplicación:
+```bash
+npm run build:clean
+```
+
+5. Iniciar el servicio:
+```bash
+NODE_ENV=production node dist/index.js
+```
 
 ### **2.5. Seguridad**
 

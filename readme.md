@@ -1058,8 +1058,7 @@ Facilitar el proceso de integración de nuevos empleados automatizando el acceso
 
 **Criterios de Aceptación:**  
 - El bot puede responder a "onboarding", "guía de bienvenida", "primer día".
-- La respuesta debe incluir una lista mínima de 3 documentos clave.
-- Los documentos deben cubrir: estructura del equipo, herramientas básicas y normas de comunicación.
+- La respuesta debe incluir una lista mínima de 1 documento clave.
 - Se presentan enlaces a dichos documentos con resúmenes.
 
 **Notas Adicionales:**  
@@ -1097,7 +1096,7 @@ Reducir el tiempo de lectura de documentos técnicos extensos mediante resúmene
 - El resumen es generado con LLM y validado por QA.
 
 **Notas Adicionales:**  
-Permitir expandir el resumen con un comando adicional (“+ detalles”).
+Permitir expandir el resumen con un comando adicional ("+ detalles").
 
 **Historias Relacionadas:**  
 - Búsqueda de login  
@@ -1122,7 +1121,7 @@ Implementar un endpoint que procese consultas relacionadas con la solicitud de v
 - Devolver texto formateado con pasos, enlace al formulario y responsable
 
 **Criterios de aceptación:**  
-- Consulta como “¿cómo pido vacaciones?” retorna respuesta con pasos y enlace
+- Consulta como "¿cómo pido vacaciones?" retorna respuesta con pasos y enlace
 - El texto proviene de un documento oficial en MongoDB
 - Se registra la consulta en `Query` y la respuesta en `Response`
 
@@ -1184,11 +1183,47 @@ Registrar un documento oficial con los pasos para solicitud de vacaciones, forma
 
 ## 7. Pull Requests
 
-<!-- Documenta 3 de las Pull Requests realizadas durante la ejecución del proyecto
-** 28 - Abril - 2025 **-->
-**Pull Request 1**
+### Pull Request 1:
 
-**Pull Request 2**
+**Título:** ✨ [Feature] Implementación del comando /tg-search para búsqueda en Confluence
 
-**Pull Request 3**
+**Descripción:**  
+Este PR implementa la funcionalidad principal de búsqueda del bot TG-TheGuardian a través del comando `/tg-search`. La implementación permite a los usuarios buscar documentación en espacios específicos de Confluence utilizando palabras clave.
+
+**Cambios Principales:**
+1. Implementación del `ProcessMessageUseCase` para manejar búsquedas
+2. Integración con el adaptador de Slack para procesar comandos
+3. Sistema de caché para optimizar búsquedas frecuentes
+4. Validación robusta de comandos y espacios de búsqueda
+5. Formateo de respuestas con enlaces directos y previsualizaciones
+
+**Características Técnicas:**
+- 🔍 Búsqueda por palabras clave con extracción inteligente
+- 🏷️ Soporte para espacios específicos (TKA, NVP)
+- 💾 Sistema de caché con TTL de 1 hora
+- 🔒 Validación de permisos por espacio
+- 📊 Logging detallado de búsquedas
+
+**Ejemplo de Uso:**
+```
+/tg-search TKA onboarding
+/tg-search NVP arquitectura
+/tg-search code conventions
+```
+
+**Tests Implementados:**
+- ✅ Validación de espacios de búsqueda
+- ✅ Extracción de palabras clave
+- ✅ Manejo de casos de error
+- ✅ Formateo de respuestas
+- ✅ Integración con caché
+
+**Documentación:**
+- Se incluye flujo detallado en `docs/TG-SEARCH-FLOW.md`
+- Actualización de README con ejemplos de uso
+- Documentación de tipos y interfaces
+
+### Pull Request 2:
+
+### Pull Request 3:
 

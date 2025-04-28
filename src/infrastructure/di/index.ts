@@ -2,11 +2,13 @@ import { MongoDBAdapter } from '../../adapters/persistence/MongoDBAdapter';
 import { OpenAIAdapter } from '../../adapters/llm/OpenAIAdapter';
 import { SlackAdapter } from '../../adapters/slack/SlackAdapter';
 import { RedisAdapter } from '../../adapters/cache/RedisAdapter';
+import { ConfluenceAdapter } from '../../adapters/confluence/ConfluenceAdapter';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { MessagePort } from '../../domain/ports/MessagePort';
 import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
 import { CachePort } from '../../domain/ports/CachePort';
+import { KnowledgePort } from '../../domain/ports/KnowledgePort';
 import { RedisConnectionFactory, RedisConfig } from '../cache/RedisConnectionFactory';
 import logger from '../logging/Logger';
 import { Logger } from 'winston';
@@ -28,6 +30,7 @@ export class DependencyContainer {
         ai: AIAdapter;
         messaging: MessagePort;
         cache: CachePort;
+        knowledge: KnowledgePort;
         logger: Logger;
     };
 
@@ -41,6 +44,7 @@ export class DependencyContainer {
             ai: {} as AIAdapter,
             messaging: {} as MessagePort,
             cache: {} as CachePort,
+            knowledge: {} as KnowledgePort,
             logger: logger
         };
 
@@ -75,6 +79,7 @@ export class DependencyContainer {
             this.services.persistence = new MongoDBAdapter(config.mongoUri || 'mongodb://localhost:27017/theguardian', this.services.logger);
             this.services.ai = new OpenAIAdapter(config.openAiKey);
             this.services.messaging = new SlackAdapter(this.services.logger, this.services.cache);
+            this.services.knowledge = new ConfluenceAdapter(this.services.logger);
 
             // Inicializar casos de uso
             this.useCases.processMessage = new ProcessMessageUseCase(
@@ -82,6 +87,7 @@ export class DependencyContainer {
                 this.services.ai,
                 this.services.persistence,
                 this.services.cache,
+                this.services.knowledge,
                 this.services.logger
             );
 
@@ -105,6 +111,14 @@ export class DependencyContainer {
             if ('healthCheck' in this.services.persistence) {
                 const mongoHealth = await (this.services.persistence as MongoDBAdapter).healthCheck();
                 this.services.logger.info('💾 MongoDB health check:', mongoHealth ? '✅' : '❌');
+            }
+
+            // Verificar Confluence
+            try {
+                await this.services.knowledge.searchKnowledge('test');
+                this.services.logger.info('📚 Confluence health check: ✅');
+            } catch (error) {
+                this.services.logger.error('❌ Error en health check de Confluence:', error);
             }
 
             // No necesitamos verificar Slack porque ya se verifica en el start()
@@ -131,6 +145,10 @@ export class DependencyContainer {
 
     getCacheAdapter(): CachePort {
         return this.services.cache;
+    }
+
+    getKnowledgeAdapter(): KnowledgePort {
+        return this.services.knowledge;
     }
 
     getLogger(): Logger {

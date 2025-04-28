@@ -4,78 +4,162 @@ import { MessagePort } from '../../../domain/ports/MessagePort';
 import { AIAdapter } from '../../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../../domain/ports/PersistencePort';
 import { CachePort } from '../../../domain/ports/CachePort';
+import { KnowledgePort, SearchResult } from '../../../domain/ports/KnowledgePort';
 import { Logger } from 'winston';
+import { SearchCommand } from '../../commands/search.command';
 
 export class ProcessMessageUseCase {
   private readonly CACHE_NAMESPACE = 'search-results';
   private readonly CACHE_TTL = 3600; // 1 hora
+  private readonly searchCommand: SearchCommand;
 
   constructor(
     private readonly messagePort: MessagePort,
     private readonly aiAdapter: AIAdapter,
     private readonly persistencePort: PersistencePort,
     private readonly cachePort: CachePort,
+    private readonly knowledgePort: KnowledgePort,
     private readonly logger: Logger
-  ) {}
+  ) {
+    this.searchCommand = new SearchCommand(logger);
+  }
 
   async execute(message: Message): Promise<BotResponse> {
     try {
-      const cacheKey = `${this.CACHE_NAMESPACE}:${message.content}`;
-
-      // 1. Intentar obtener respuesta del caché
-      const cachedResponse = await this.cachePort.get<string[]>(cacheKey);
-
-      if (cachedResponse) {
-        this.logger.info('Respuesta encontrada en caché', {
-          content: message.content
-        });
-
-        return {
-          content: cachedResponse[0],
-          type: 'text',
-          threadId: message.threadId,
-          metadata: { source: 'cache' }
-        };
+      if (message.type === 'command' && message.metadata?.command === 'search') {
+        return await this.handleSearchCommand(message);
       }
 
-      // 2. Procesar el mensaje con IA
-      const aiResponse = await this.aiAdapter.processMessage(message);
-
-      // 3. Guardar el mensaje y la respuesta
-      await this.persistencePort.saveMessage(message);
-      
-      // 4. Enviar la respuesta
-      await this.messagePort.sendMessage(message.channel, aiResponse.content);
-
-      // 5. Cachear la respuesta para futuras consultas similares
-      await this.cachePort.set(
-        cacheKey,
-        [aiResponse.content],
-        { ttl: this.CACHE_TTL }
-      );
-
-      return aiResponse;
+      // Respuesta por defecto para otros tipos de mensajes
+      return {
+        content: `¡Hola! 👋 Estos son los comandos disponibles:
+• /tg-search [Espacio en Confluence] [palabras clave] - Buscar en la base de conocimiento
+        * TKA: Teravision Knowledge Archive
+        * NVP: Proyecto Código: NVP.
+  Ejemplo: /tg-search TKA code conventions
+  Ejemplo: /tg-search NVP arquitectura
+• /tg-question [pregunta] - Hacer una pregunta específica
+• /tg-summary [texto] - Generar un resumen`,
+        type: 'text',
+        metadata: {
+          source: 'Sistema',
+          confidence: 1
+        }
+      };
     } catch (error) {
       this.logger.error('Error procesando mensaje:', error);
-      
-      // Guardar el error en la persistencia para análisis
-      await this.persistencePort.saveMessage({
-        ...message,
-        metadata: {
-          error: true,
-          errorMessage: error instanceof Error ? error.message : 'Error desconocido'
-        }
-      });
-
       return {
-        content: 'Lo siento, ocurrió un error al procesar tu mensaje.',
-        type: 'error',
-        threadId: message.threadId,
+        content: '❌ Lo siento, ocurrió un error al procesar tu mensaje.',
+        type: 'text',
         metadata: {
-          error: true,
-          message: error instanceof Error ? error.message : 'Error desconocido'
+          source: 'Sistema',
+          confidence: 0,
+          hasError: true
         }
       };
     }
+  }
+
+  private async handleSearchCommand(message: Message): Promise<BotResponse> {
+    // 1. Validar la búsqueda usando SearchCommand
+    const validation = await this.searchCommand.validate(message);
+    if (!validation.isValid) {
+      return {
+        content: validation.error || '❌ Error en la búsqueda',
+        type: 'text',
+        metadata: {
+          source: 'Sistema',
+          confidence: 0,
+          hasError: true
+        }
+      };
+    }
+
+    const searchQuery = validation.keywords?.join(' ') || '';
+    
+    // 2. Verificar caché
+    const cacheKey = `${this.CACHE_NAMESPACE}:${validation.spaceKey || 'default'}:${searchQuery}`;
+    const cachedResults = await this.cachePort.get<SearchResult[]>(cacheKey);
+    if (cachedResults) {
+      return {
+        content: this.formatSearchResults(cachedResults, searchQuery, validation.spaceKey, validation.spaceName),
+        type: 'text',
+        metadata: {
+          source: 'cache',
+          confidence: 0.8,
+          keywords: searchQuery,
+          spaceKey: validation.spaceKey
+        }
+      };
+    }
+
+    // 3. Realizar la búsqueda
+    try {
+      const results = await this.knowledgePort.searchKnowledge(searchQuery, validation.spaceKey);
+      
+      // 4. Cachear resultados
+      if (results.length > 0) {
+        await this.cachePort.set(cacheKey, results, { ttl: this.CACHE_TTL });
+      }
+
+      // 5. Formatear y devolver resultados
+      return {
+        content: this.formatSearchResults(results, searchQuery, validation.spaceKey, validation.spaceName),
+        type: 'text',
+        metadata: {
+          source: 'knowledge_base',
+          confidence: 1,
+          keywords: searchQuery,
+          spaceKey: validation.spaceKey
+        }
+      };
+    } catch (error) {
+      this.logger.error('Error en búsqueda:', error);
+      return {
+        content: '❌ Lo siento, ocurrió un error al realizar la búsqueda.',
+        type: 'text',
+        metadata: {
+          source: 'Sistema',
+          confidence: 0,
+          hasError: true
+        }
+      };
+    }
+  }
+
+  private formatSearchResults(results: SearchResult[], query: string, spaceKey?: string, spaceName?: string): string {
+    if (!results.length) {
+      return `❌ No se encontraron resultados para "${query}" en ${spaceName || spaceKey || 'la base de conocimiento'}.`;
+    }
+
+    const header = `🔍 *Resultados para "${query}" en ${spaceName || spaceKey}:*\n`;
+    
+    const formattedResults = results
+      .sort((a, b) => b.relevance - a.relevance)
+      .map(result => {
+        // Limpiar el contenido de tags HTML y caracteres especiales
+        const cleanContent = result.content
+          .replace(/<[^>]*>/g, '') // Remover tags HTML
+          .replace(/&[^;]+;/g, '') // Remover entidades HTML
+          .replace(/\s+/g, ' ') // Normalizar espacios
+          .trim();
+
+        // Formatear el contenido para mostrar solo las primeras 200 caracteres
+        const contentPreview = cleanContent.length > 200 
+          ? cleanContent.substring(0, 200) + '...'
+          : cleanContent;
+
+        // Formatear las etiquetas o mostrar mensaje si no hay
+        const labels = result.metadata.labels && result.metadata.labels.length > 0
+          ? result.metadata.labels.join(', ')
+          : 'Sin etiquetas';
+
+        return `📄 *${result.source}*\n` +
+               `🔗 <${result.metadata.url}|Ver documento>\n` +
+               `📝 ${contentPreview}\n` +
+               `🏷️ ${labels}`;
+      }).join('\n\n');
+
+    return `${header}\n${formattedResults}`;
   }
 } 

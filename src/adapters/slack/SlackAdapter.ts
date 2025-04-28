@@ -6,6 +6,8 @@ import { ValidationMiddleware } from '../../infrastructure/middleware/Validation
 import { Logger } from 'winston';
 import { CacheManager } from '../../infrastructure/cache/CacheManager';
 import { CachePort } from '../../domain/ports/CachePort';
+import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
+import { container } from '../../infrastructure/di';
 
 interface SlackMessageEvent {
   user?: string;
@@ -19,6 +21,7 @@ export class SlackAdapter implements MessagePort {
   private app: App | null = null;
   private validationMiddleware: ValidationMiddleware;
   private cacheManager: CacheManager;
+  private processMessageUseCase: ProcessMessageUseCase | null = null;
 
   constructor(
     private readonly logger: Logger,
@@ -26,6 +29,16 @@ export class SlackAdapter implements MessagePort {
   ) {
     this.validationMiddleware = new ValidationMiddleware(logger);
     this.cacheManager = new CacheManager(cache, logger);
+  }
+
+  private getProcessMessageUseCase(): ProcessMessageUseCase {
+    if (!this.processMessageUseCase) {
+      this.processMessageUseCase = container.getProcessMessageUseCase();
+      if (!this.processMessageUseCase) {
+        throw new Error('ProcessMessageUseCase no está inicializado en el contenedor');
+      }
+    }
+    return this.processMessageUseCase;
   }
 
   private assertAppInitialized(): void {
@@ -36,7 +49,7 @@ export class SlackAdapter implements MessagePort {
 
   private initializeEventListeners(): void {
     this.assertAppInitialized();
-    const app = this.app!; // TypeScript now knows app is not null
+    const app = this.app!;
 
     // Escuchar mensajes directos
     app.message(async ({ message, say, client }) => {
@@ -103,14 +116,31 @@ export class SlackAdapter implements MessagePort {
 
     // Comando de búsqueda
     app.command('/tg-search', async ({ command, ack, respond }) => {
+      this.logger.info('Comando /tg-search recibido:', {
+        text: command.text,
+        user: command.user_name,
+        channel: command.channel_name
+      });
+
       await ack();
       try {
-        console.log('Comando search recibido:', command); // Log para debugging
-        const botResponse = await this.processCommand(command, '/tg-search');
+        // Validar el comando
+        await this.validationMiddleware.validateCommand('/tg-search')({ body: command } as any, { json: respond } as any, async () => {
+          this.logger.info('Procesando comando /tg-search:', {
+            text: command.text,
+            user: command.user_name
+          });
 
-        await respond(this.formatResponse(botResponse));
+          const botResponse = await this.processCommand(command, '/tg-search');
+          this.logger.info('Respuesta generada para /tg-search:', {
+            content: botResponse.content,
+            metadata: botResponse.metadata
+          });
+
+          await respond(this.formatResponse(botResponse));
+        });
       } catch (error) {
-        console.error('Error processing search command:', error);
+        this.logger.error('Error en comando search:', error);
         await respond('Lo siento, ocurrió un error al procesar tu búsqueda.');
       }
     });
@@ -118,13 +148,15 @@ export class SlackAdapter implements MessagePort {
     // Comando de preguntas
     app.command('/tg-question', async ({ command, ack, respond }) => {
       await ack();
+      this.logger.info('❓ Comando question recibido:', command);
       try {
-        console.log('Comando question recibido:', command); // Log para debugging
-        const botResponse = await this.processCommand(command, '/tg-question');
-
-        await respond(this.formatResponse(botResponse));
+        // Validar el comando
+        await this.validationMiddleware.validateCommand('/tg-question')({ body: command } as any, { json: respond } as any, async () => {
+          const botResponse = await this.processCommand(command, '/tg-question');
+          await respond(this.formatResponse(botResponse));
+        });
       } catch (error) {
-        console.error('Error processing question command:', error);
+        this.logger.error('Error en comando question:', error);
         await respond('Lo siento, ocurrió un error al procesar tu pregunta.');
       }
     });
@@ -132,13 +164,15 @@ export class SlackAdapter implements MessagePort {
     // Comando de resumen
     app.command('/tg-summary', async ({ command, ack, respond }) => {
       await ack();
+      this.logger.info('📝 Comando summary recibido:', command);
       try {
-        console.log('Comando summary recibido:', command); // Log para debugging
-        const botResponse = await this.processCommand(command, '/tg-summary');
-
-        await respond(this.formatResponse(botResponse));
+        // Validar el comando
+        await this.validationMiddleware.validateCommand('/tg-summary')({ body: command } as any, { json: respond } as any, async () => {
+          const botResponse = await this.processCommand(command, '/tg-summary');
+          await respond(this.formatResponse(botResponse));
+        });
       } catch (error) {
-        console.error('Error processing summary command:', error);
+        this.logger.error('Error en comando summary:', error);
         await respond('Lo siento, ocurrió un error al generar el resumen.');
       }
     });
@@ -146,6 +180,12 @@ export class SlackAdapter implements MessagePort {
 
   private async processCommand(command: any, commandType: string): Promise<BotResponse> {
     try {
+      this.logger.info(`Procesando comando ${commandType}:`, {
+        text: command.text,
+        user: command.user_name,
+        channel: command.channel_name
+      });
+
       // Intentar obtener respuesta del caché
       const cachedResponse = await this.cacheManager.getCachedResponse(
         commandType,
@@ -153,11 +193,15 @@ export class SlackAdapter implements MessagePort {
       );
 
       if (cachedResponse) {
+        this.logger.info('Respuesta encontrada en caché:', {
+          commandType,
+          text: command.text
+        });
         return cachedResponse;
       }
 
-      // Si no hay caché, procesar normalmente
-      const response = await this.processMessage({
+      // Procesar el mensaje según el tipo de comando
+      const message: Message = {
         content: command.text,
         userId: command.user_id,
         username: command.user_name,
@@ -167,7 +211,40 @@ export class SlackAdapter implements MessagePort {
         metadata: { 
           command: commandType.replace('/tg-', '') as 'search' | 'question' | 'summary'
         }
-      });
+      };
+
+      let response: BotResponse;
+
+      switch (commandType) {
+        case '/tg-search':
+          response = await this.getProcessMessageUseCase().execute(message);
+          break;
+
+        case '/tg-question':
+          response = {
+            content: `❓ *Nueva Pregunta:* "${message.content}"\n\nAnalizando tu consulta...\n• Pregunta: ${message.content}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
+            type: 'text',
+            metadata: {
+              source: 'Sistema de preguntas y respuestas',
+              confidence: 0.90
+            }
+          };
+          break;
+
+        case '/tg-summary':
+          response = {
+            content: `📝 *Solicitud de Resumen:* "${message.content}"\n\nGenerando resumen del documento...\n• Documento: ${message.content}\n• Tipo: ${message.content.endsWith('.pdf') ? 'PDF' : 'Link'}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
+            type: 'text',
+            metadata: {
+              source: 'Generador de resúmenes',
+              confidence: 0.85
+            }
+          };
+          break;
+
+        default:
+          throw new Error(`Comando no soportado: ${commandType}`);
+      }
 
       // Guardar en caché
       await this.cacheManager.setCachedResponse(
@@ -175,6 +252,12 @@ export class SlackAdapter implements MessagePort {
         command.text,
         response
       );
+
+      this.logger.info('Respuesta generada:', {
+        commandType,
+        text: command.text,
+        responseType: response.type
+      });
 
       return response;
     } catch (error) {
@@ -224,59 +307,47 @@ export class SlackAdapter implements MessagePort {
   }
 
   async processMessage(message: Message): Promise<BotResponse> {
-    // Si es un comando, procesar según el tipo
-    if (message.type === 'command' && message.metadata?.command) {
-      switch (message.metadata.command) {
-        case 'search':
-          return {
-            content: `🔍 *Búsqueda de Documentos:* "${message.content}"\n\nBuscando en la base de documentos...\n• Término de búsqueda: ${message.content}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
-            type: 'text',
-            metadata: {
-              source: 'Búsqueda de documentos',
-              confidence: 0.95
-            }
-          };
+    try {
+      if (message.type === 'command' && message.metadata?.command) {
+        switch (message.metadata.command) {
+          case 'search':
+            return await this.getProcessMessageUseCase().execute(message);
 
-        case 'question':
-          return {
-            content: `❓ *Nueva Pregunta:* "${message.content}"\n\nAnalizando tu consulta...\n• Pregunta: ${message.content}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
-            type: 'text',
-            metadata: {
-              source: 'Sistema de preguntas y respuestas',
-              confidence: 0.90
-            }
-          };
+          case 'question':
+            return {
+              content: `❓ *Nueva Pregunta:* "${message.content}"\n\nAnalizando tu consulta...\n• Pregunta: ${message.content}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
+              type: 'text',
+              metadata: {
+                source: 'Sistema de preguntas y respuestas',
+                confidence: 0.90
+              }
+            };
 
-        case 'summary':
-          return {
-            content: `📝 *Solicitud de Resumen:* "${message.content}"\n\nGenerando resumen del documento...\n• Documento: ${message.content}\n• Tipo: ${message.content.endsWith('.pdf') ? 'PDF' : 'Link'}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
-            type: 'text',
-            metadata: {
-              source: 'Generador de resúmenes',
-              confidence: 0.85
-            }
-          };
+          case 'summary':
+            return {
+              content: `📝 *Solicitud de Resumen:* "${message.content}"\n\nGenerando resumen del documento...\n• Documento: ${message.content}\n• Tipo: ${message.content.endsWith('.pdf') ? 'PDF' : 'Link'}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
+              type: 'text',
+              metadata: {
+                source: 'Generador de resúmenes',
+                confidence: 0.85
+              }
+            };
+        }
       }
-    }
 
-    // Si es una mención o mensaje directo
-    if (message.type === 'mention' || message.type === 'direct_message') {
+      return await this.getProcessMessageUseCase().execute(message);
+    } catch (error) {
+      this.logger.error('Error procesando mensaje:', error);
       return {
-        content: `¡Hola ${message.username}! 👋\nHe recibido tu mensaje: "${message.content}"\n\nPuedes usar los siguientes comandos:\n• \`/tg-search\` para buscar documentos\n• \`/tg-question\` para hacer cualquier tipo de pregunta\n• \`/tg-summary\` para resumir documentos (links o PDFs)`,
+        content: '❌ Lo siento, ocurrió un error al procesar tu mensaje.',
         type: 'text',
         metadata: {
-          source: 'Ayuda del bot',
-          confidence: 1.0
+          source: 'Sistema',
+          confidence: 0,
+          hasError: true
         }
       };
     }
-
-    // Respuesta por defecto
-    return {
-      content: '❓ No pude determinar cómo procesar este mensaje. Por favor, usa uno de los comandos disponibles o mencióname para obtener ayuda.',
-      type: 'text',
-      metadata: {}
-    };
   }
 
   async sendMessage(channel: string, text: string): Promise<void> {
@@ -311,83 +382,43 @@ export class SlackAdapter implements MessagePort {
     // Manejador de errores global
     this.app.error(async (error) => {
       console.error('⚠️ Error en Slack App:', error);
-    });
-
-    // Configurar comandos con validación
-    this.app.command('/tg-search', async ({ command, ack, respond }) => {
-      await ack();
-      console.log('🔍 Comando search recibido:', command);
-      try {
-        // Validar el comando
-        await this.validationMiddleware.validateCommand('/tg-search')({ body: command } as any, { json: respond } as any, async () => {
-          const botResponse = await this.processCommand(command, '/tg-search');
-          await respond(this.formatResponse(botResponse));
-        });
-      } catch (error) {
-        console.error('Error en comando search:', error);
-        await respond('Lo siento, ocurrió un error al procesar tu búsqueda.');
-      }
-    });
-
-    this.app.command('/tg-question', async ({ command, ack, respond }) => {
-      await ack();
-      console.log('❓ Comando question recibido:', command);
-      try {
-        // Validar el comando
-        await this.validationMiddleware.validateCommand('/tg-question')({ body: command } as any, { json: respond } as any, async () => {
-          const botResponse = await this.processCommand(command, '/tg-question');
-          await respond(this.formatResponse(botResponse));
-        });
-      } catch (error) {
-        console.error('Error en comando question:', error);
-        await respond('Lo siento, ocurrió un error al procesar tu pregunta.');
-      }
-    });
-
-    this.app.command('/tg-summary', async ({ command, ack, respond }) => {
-      await ack();
-      console.log('📝 Comando summary recibido:', command);
-      try {
-        // Validar el comando
-        await this.validationMiddleware.validateCommand('/tg-summary')({ body: command } as any, { json: respond } as any, async () => {
-          const botResponse = await this.processCommand(command, '/tg-summary');
-          await respond(this.formatResponse(botResponse));
-        });
-      } catch (error) {
-        console.error('Error en comando summary:', error);
-        await respond('Lo siento, ocurrió un error al generar el resumen.');
-      }
-    });
-
-    // Configurar evento de mención
-    this.app.event('app_mention', async ({ event, say }) => {
-      console.log('👋 Mención recibida:', event);
-      try {
-        if (!event.user || !event.text || !event.channel) {
-          console.warn('Evento de mención incompleto:', event);
-          return;
+      // Intentar reconectar si es un error de conexión
+      if (error.message.includes('disconnect') || error.message.includes('websocket')) {
+        console.log('🔄 Intentando reconectar...');
+        try {
+          await this.app?.start();
+        } catch (reconnectError) {
+          console.error('❌ Error al reconectar:', reconnectError);
         }
-
-        const botResponse = await this.processMessage({
-          content: event.text,
-          userId: event.user,
-          username: 'Usuario', // Aquí deberíamos obtener el nombre real
-          channel: event.channel,
-          timestamp: new Date(),
-          type: 'mention'
-        });
-        await say(this.formatResponse(botResponse));
-      } catch (error) {
-        console.error('Error en mención:', error);
-        await say('Lo siento, ocurrió un error al procesar tu mención.');
       }
     });
 
-    await this.app.start();
-    console.log(`⚡️ Slack Bolt app está corriendo en modo Socket en el puerto ${port}!`);
-    console.log('🔍 Comandos registrados y esperando:');
-    console.log('- /tg-search  -> para búsqueda de documentos');
-    console.log('- /tg-question -> para hacer preguntas');
-    console.log('- /tg-summary  -> para resumir documentos');
+    // Configurar comandos y eventos
+    this.initializeEventListeners();
+    this.initializeCommands();
+
+    try {
+      await this.app.start();
+      console.log(`⚡️ Slack Bolt app está corriendo en modo Socket en el puerto ${port}!`);
+      console.log('🔍 Comandos registrados y esperando:');
+      console.log('- /tg-search  -> para búsqueda de documentos');
+      console.log('- /tg-question -> para hacer preguntas');
+      console.log('- /tg-summary  -> para resumir documentos');
+    } catch (error) {
+      console.error('❌ Error al iniciar la aplicación:', error);
+      throw error;
+    }
+  }
+
+  private async handleReconnection(): Promise<void> {
+    console.log('🔄 Intentando reconectar...');
+    try {
+      await this.app?.start();
+      console.log('✅ Reconexión exitosa');
+    } catch (error) {
+      console.error('❌ Error al reconectar:', error);
+      // Esperar 5 segundos antes de intentar nuevamente
+      setTimeout(() => this.handleReconnection(), 5000);
+    }
   }
 } 

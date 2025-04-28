@@ -143,11 +143,25 @@ A partir de estas consideraciones, describe las practicas de seguridad principal
 
 ### **2.6. Tests**
 
+---------------------------------------
+     FUNCIONALIDAD 1: /tg-search
+---------------------------------------
 **Prompt 1:**
+Teniendo en cuenta la funcionalidad que acabamos de realizar, con respecto a busqueda por medio de palabras clave, y usando espacios de confluences definidos, quiero que trabajemos en Test unitarios. Revisemos los test realizados hasta el momento en @search.command.test.ts y cuentame, que sugerencias podrias ver en cada una de ellas (de haberlas).
 
 **Prompt 2:**
+Ahora, me gustaria que revisaramos los test realizados durante el proceso de creacion de la funcionalidad, teniendo en cuenta los criterios: 
+
+1. Usa nombres en Ingles para variables y funciones. Los comentarios dejalos en español para entender lo que se esta haciendo.
+2. Utiliza nombres de funciones de prueba descriptivos que indiquen claramente lo que se esta haciendo.
+3. Usa patron Arrange--Act-Assert para mejorar la legibilidad
+4. Parametriza las pruebas que sigan un patron similar
+5. Usa mensajes de afirmación, por si la prueba sale mal, para detectarla rapidamente.
+
+Recuerda mantener el codigo lo mas sencillo y simple posible, y asegurarte de que, no solo las pruebas unitarias puedan pasar sin problema y que no tengan errores de compilacion o errores linter, sino que la funcionalidad permanezca intacta. En este momento todo funciona bien.
 
 **Prompt 3:**
+Resolvamos los errores de integracion de Slack. Si se tratan de archivos faltantes, revisa bien que no esten creados en el proyecto y solo si no hay nada de eso, crearlos.
 
 ---
 
@@ -263,8 +277,52 @@ Hagamoslo una ultima vez, para la historia "Como un desarrollador, quiero obtene
 
 ### 7. Pull Requests
 
+---------------------------------------
+FUNCIONALIDAD 1: /tg-search
+---------------------------------------
 **Prompt 1:**
+Hoy vamos a trabajar en el Dia 1 de la Semana 3. Los objetivos principales seran:
+
+* Implementar comando /tg-search base.
+* Crear sistema de búsqueda por keywords.
+* Implementar conexión con API de Confluence.
+* Configurar sistema de indexación de documentos.
+
+Para ello, el flujo debe suceder de tal forma que pueda cumplir una historia de usuario como la resaltada en el readme. 
+
+De aqui podemos destacar y considerar: 
+1. Persona usa el comando para hacer una consulta con palabras clave
+2. El bot toma las palabras clave y busca en Confluence documentos relacionados con esas palabras clave
+3. Responde con minimo 1 documento de regreso.
+4. La respuesta puede traer un resumen breve del documento, y el link al documento en si.
+
+Con esto dicho, no quiero que ejecutes nada de codigo aun. Me gustaria que definieras la lista de tickets de trabajo, para considerar los objetivos de hoy, terminados, cumpliendo con esta funcionalidad principal, manteniendolo en el MVP planteado, y realizando sugerencias (Ej: Que no sea por Keywords sino por preguntas en lenguaje natural).
+
+Regresame la lista de tickets, solo con el titulo para saber cuantas cosas debemos hacer.
 
 **Prompt 2:**
+Prioricemos los tickets. Para cada ticket, damelos en el siguiente formato Markdown: 
+```
+-----
+Ticket # (Numero del ticket)
+*TITULO: * (Titulo del ticket)
+*Descripcion: * (Descripcion no mayor a 3 lineas de lo que se hara)
+*Prioridad: * (Prioridad definida arriba)
+*Estimado: * (Tiempo en horas)
+*Comentarios: * (Notas a considerar si aplica)
+```
 
 **Prompt 3:**
+Desarrollemos el primer ticket: Diseñar y documentar el flujo base del comando /tg-search. Para toda esta documentacion, crea un nuevo archivo Markdown, en la carpeta "docs". Recuerda mantener cualquier implementacion lo mas sencilla posible, y alineada al @TG-TheGuardian-README.md ya existente.
+
+**Prompt 4:**
+Pasemos al Segundo Ticket: Implementar el endpoint/comando /tg-search en el bot. Explicame paso a paso como avanzaras para desarrollar este ticket. No ejecutes nada.
+
+**Prompt 5:**
+Procedamos con los pasos. Recuerda que actualmente, cuando el bot es usado y se envia "/tg-search" tiene una respuesta predefinida en @SlackAdapter.ts aqui . Considera los cambios pertinentes.
+
+**Prompt 6:**
+Procedamos con el 3er Ticket: Desarrollar el sistema de extracción de palabras clave desde la consulta del usuario.
+
+**Prompt 7:**
+Vamos ahora con el ticket 4: Implementar el adaptador de conexión con la API de Confluence. Este por ser la integracion de una nueva API, me gustaria que tuviesemos cuidado y me indiques paso a paso donde debo intervenir para la configuracion del API. Hasta el momento, recuerdo que ya teniamos algunos archivos de test y adaptadores para Confluence como @ConfluenceAdapter.ts @ConfluenceDocument.ts , asi que revisa antes de implementar logica nueva. 

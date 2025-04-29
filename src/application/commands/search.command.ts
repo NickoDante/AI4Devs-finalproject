@@ -13,6 +13,7 @@ export interface SearchValidationResult {
 
 export class SearchCommand {
     private keywordExtractor: KeywordExtractor;
+    private readonly SPACE_SEPARATOR = '--';
 
     constructor(
         private readonly logger: Logger
@@ -30,58 +31,49 @@ export class SearchCommand {
                 };
             }
 
-            // 2. Extraer espacio y palabras clave
-            const parts = message.content.trim().split(' ').filter(part => part.length > 0);
-            let spaceKey: string | undefined;
-            let spaceName: string | undefined;
+            // 2. Separar contenido por el doble guion
+            const parts = message.content.split(this.SPACE_SEPARATOR).map(part => part.trim());
+            let searchContent: string;
+            let spaceKey: string;
+            let spaceName: string;
             let keywords: string[];
 
-            // Si el primer término parece un espacio (mayúsculas), validarlo
-            if (parts[0] && /^[A-Z]+$/.test(parts[0])) {
-                if (!isValidSpaceKey(parts[0])) {
+            // Si hay doble guion, procesar espacio específico
+            if (parts.length > 1) {
+                searchContent = parts[0];
+                const specifiedSpace = parts[1];
+
+                if (!isValidSpaceKey(specifiedSpace)) {
                     const defaultSpace = getDefaultSpace();
                     return {
                         isValid: false,
-                        error: `❌ El espacio "${parts[0]}" no es válido. Los espacios disponibles son: ${defaultSpace.key} (${defaultSpace.name}), NVP (NVP Documentation)`
+                        error: `❌ El espacio "${specifiedSpace}" no es válido. Los espacios disponibles son: ${defaultSpace.key} (${defaultSpace.name}), NVP (NVP Documentation)`
                     };
                 }
-                spaceKey = parts[0];
+                spaceKey = specifiedSpace;
                 const space = getSpaceByKey(spaceKey);
-                spaceName = space?.name;
-                const remainingContent = parts.slice(1).join(' ').trim();
-                if (!remainingContent) {
-                    return {
-                        isValid: false,
-                        error: '❌ No se pudieron extraer palabras clave válidas de tu búsqueda.'
-                    };
-                }
-                try {
-                    keywords = this.keywordExtractor.extractKeywords(remainingContent);
-                } catch (error) {
-                    this.logger.error('Error extrayendo palabras clave:', error);
-                    return {
-                        isValid: false,
-                        error: '❌ Lo siento, hubo un error al procesar tu búsqueda.'
-                    };
-                }
+                spaceName = space?.name || '';
             } else {
-                try {
-                    keywords = this.keywordExtractor.extractKeywords(message.content);
-                } catch (error) {
-                    this.logger.error('Error extrayendo palabras clave:', error);
-                    return {
-                        isValid: false,
-                        error: '❌ Lo siento, hubo un error al procesar tu búsqueda.'
-                    };
-                }
+                // Si no hay doble guion, usar espacio por defecto
+                searchContent = parts[0];
                 const defaultSpace = getDefaultSpace();
                 spaceKey = defaultSpace.key;
                 spaceName = defaultSpace.name;
             }
-            
+
+            // 3. Extraer palabras clave
+            try {
+                keywords = this.keywordExtractor.extractKeywords(searchContent);
+            } catch (error) {
+                this.logger.error('Error extrayendo palabras clave:', error);
+                return {
+                    isValid: false,
+                    error: '❌ Lo siento, hubo un error al procesar tu búsqueda.'
+                };
+            }
+
             // Validar que haya palabras clave válidas
-            if (!keywords || keywords.length === 0 || 
-                (keywords.length === 1 && keywords[0] === message.content.trim())) {
+            if (!keywords || keywords.length === 0) {
                 return {
                     isValid: false,
                     error: '❌ No se pudieron extraer palabras clave válidas de tu búsqueda.'
@@ -105,15 +97,7 @@ export class SearchCommand {
             };
 
         } catch (error) {
-            try {
-                this.logger.error('Error en validación de búsqueda:', error);
-            } catch (loggerError) {
-                // Si el logger falla, aún queremos devolver un error al usuario
-                return {
-                    isValid: false,
-                    error: '❌ Lo siento, hubo un error al procesar tu búsqueda.'
-                };
-            }
+            this.logger.error('Error en validación de búsqueda:', error);
             return {
                 isValid: false,
                 error: '❌ Lo siento, hubo un error al procesar tu búsqueda.'

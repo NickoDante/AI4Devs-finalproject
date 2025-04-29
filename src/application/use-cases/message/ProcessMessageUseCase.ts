@@ -33,13 +33,12 @@ export class ProcessMessageUseCase {
       // Respuesta por defecto para otros tipos de mensajes
       return {
         content: `¡Hola! 👋 Estos son los comandos disponibles:
-• /tg-search [Espacio en Confluence] [palabras clave] - Buscar en la base de conocimiento
-        * TKA: Teravision Knowledge Archive
-        * NVP: Proyecto Código: NVP.
-  Ejemplo: /tg-search TKA code conventions
-  Ejemplo: /tg-search NVP arquitectura
-• /tg-question [pregunta] - Hacer una pregunta específica
-• /tg-summary [texto] - Generar un resumen`,
+• \`/tg-search <palabras clave> [-- <espacio>]\` - Buscar en la base de conocimiento
+  Recuerda que los espacios en Confluence disponibles son: 
+    * TKA: Teravision Knowledge Archive (espacio por defecto)
+    * NVP: Proyecto Código: NVP
+• \`/tg-question [pregunta]\` - Hacer una pregunta específica. Recuerda terminarla con "?".
+• \`/tg-summary [texto]\` - Generar un resumen de un link en especifico.`,
         type: 'text',
         metadata: {
           source: 'Sistema',

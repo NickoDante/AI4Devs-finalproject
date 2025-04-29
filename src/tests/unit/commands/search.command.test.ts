@@ -42,7 +42,7 @@ describe('SearchCommand Validation', () => {
     });
 
     describe('Default Space Handling', () => {
-        it('should use TKA as default space when no space is specified', async () => {
+        it('should use TKA as default space when no double dash is used', async () => {
             // Arrange
             const searchMessage: Message = {
                 content: 'search keywords example',
@@ -64,16 +64,11 @@ describe('SearchCommand Validation', () => {
             expect(result.keywords).toEqual(['search', 'keywords', 'example']);
             expect(result.error).toBeUndefined();
         });
-    });
 
-    describe('Space Key Validation', () => {
-        it.each([
-            ['TKA', 'TKA Knowledge Archive', 'code conventions'],
-            ['NVP', 'NVP Documentation', 'architecture design']
-        ])('should validate %s space correctly', async (spaceKey: string, expectedName: string, searchTerms: string) => {
+        it('should handle multiple words without double dash correctly', async () => {
             // Arrange
             const searchMessage: Message = {
-                content: `${spaceKey} ${searchTerms}`,
+                content: 'arquitectura microservicios patrones',
                 userId: 'test-user-id',
                 username: 'test-user',
                 channel: 'test-channel',
@@ -87,17 +82,67 @@ describe('SearchCommand Validation', () => {
 
             // Assert
             expect(result.isValid).toBe(true);
-            expect(result.spaceKey).toBe(spaceKey);
-            expect(result.spaceName).toBe(expectedName);
-            expect(result.keywords).toEqual(searchTerms.split(' '));
+            expect(result.spaceKey).toBe('TKA');
+            expect(result.spaceName).toBe('TKA Knowledge Archive');
+            expect(result.keywords).toEqual(['arquitectura', 'microservicios', 'patrones']);
             expect(result.error).toBeUndefined();
         });
 
-        it('should reject invalid space key', async () => {
+        it('should handle single word without double dash', async () => {
             // Arrange
-            const invalidSpace = 'INVALID';
             const searchMessage: Message = {
-                content: `${invalidSpace} search terms`,
+                content: 'onboarding',
+                userId: 'test-user-id',
+                username: 'test-user',
+                channel: 'test-channel',
+                timestamp: new Date(),
+                type: 'command',
+                metadata: { command: 'search' }
+            };
+
+            // Act
+            const result = await searchCommand.validate(searchMessage);
+
+            // Assert
+            expect(result.isValid).toBe(true);
+            expect(result.spaceKey).toBe('TKA');
+            expect(result.spaceName).toBe('TKA Knowledge Archive');
+            expect(result.keywords).toEqual(['onboarding']);
+            expect(result.error).toBeUndefined();
+        });
+    });
+
+    describe('Space Key Validation with Double Dash', () => {
+        it.each([
+            ['code conventions -- TKA', 'TKA', 'TKA Knowledge Archive', ['code', 'conventions']],
+            ['architecture design -- NVP', 'NVP', 'NVP Documentation', ['architecture', 'design']]
+        ])('should validate search "%s" correctly', async (searchInput: string, expectedSpaceKey: string, expectedSpaceName: string, expectedKeywords: string[]) => {
+            // Arrange
+            const searchMessage: Message = {
+                content: searchInput,
+                userId: 'test-user-id',
+                username: 'test-user',
+                channel: 'test-channel',
+                timestamp: new Date(),
+                type: 'command',
+                metadata: { command: 'search' }
+            };
+
+            // Act
+            const result = await searchCommand.validate(searchMessage);
+
+            // Assert
+            expect(result.isValid).toBe(true);
+            expect(result.spaceKey).toBe(expectedSpaceKey);
+            expect(result.spaceName).toBe(expectedSpaceName);
+            expect(result.keywords).toEqual(expectedKeywords);
+            expect(result.error).toBeUndefined();
+        });
+
+        it('should reject invalid space key after double dash', async () => {
+            // Arrange
+            const searchMessage: Message = {
+                content: 'search terms -- INVALID',
                 userId: 'test-user-id',
                 username: 'test-user',
                 channel: 'test-channel',
@@ -111,17 +156,17 @@ describe('SearchCommand Validation', () => {
 
             // Assert
             expect(result.isValid).toBe(false);
-            expect(result.error).toContain(invalidSpace);
+            expect(result.error).toContain('INVALID');
             expect(result.error).toContain('TKA');
             expect(result.error).toContain('NVP');
             expect(result.spaceKey).toBeUndefined();
             expect(result.spaceName).toBeUndefined();
         });
 
-        it('should reject valid space with no keywords', async () => {
+        it('should reject when no keywords before double dash', async () => {
             // Arrange
             const searchMessage: Message = {
-                content: 'TKA    ',
+                content: ' -- TKA',
                 userId: 'test-user-id',
                 username: 'test-user',
                 channel: 'test-channel',
@@ -179,7 +224,7 @@ describe('SearchCommand Validation', () => {
         it('should reject invalid keyword characters', async () => {
             // Arrange
             const searchMessage: Message = {
-                content: 'TKA @#$%^&*',
+                content: '@#$%^&* -- TKA',
                 userId: 'test-user-id',
                 username: 'test-user',
                 channel: 'test-channel',

@@ -1,5 +1,50 @@
 # Flujo del Comando /tg-search
 
+## Descripción
+El comando `/tg-search` permite a los usuarios buscar contenido en espacios específicos de Confluence directamente desde Slack.
+
+## Formato del Comando
+```
+/tg-search <palabras clave> [-- <espacio>]
+```
+
+### Parámetros
+- `<palabras clave>`: Las palabras clave para buscar en Confluence
+- `<espacio>`: (Opcional) El espacio de Confluence donde realizar la búsqueda. Si se especifica, debe estar separado por `--`
+
+### Espacios Disponibles
+- `TKA` (TKA Knowledge Archive) - Espacio por defecto
+- `NVP` (NVP Documentation)
+
+### Ejemplos
+```
+/tg-search código convenciones                 # Busca en el espacio por defecto (TKA)
+/tg-search arquitectura diseño -- NVP         # Busca en el espacio NVP
+/tg-search documentación técnica -- TKA       # Busca explícitamente en TKA
+```
+
+## Flujo de Ejecución
+1. El usuario ingresa el comando en Slack
+2. El sistema valida el formato de entrada:
+   - Verifica que haya palabras clave para buscar
+   - Si se especifica un espacio (después de `--`), valida que sea válido
+   - Si no se especifica espacio, usa TKA por defecto
+3. Se extraen las palabras clave del mensaje
+4. Se realiza la búsqueda en Confluence
+5. Se devuelven los resultados al usuario en Slack
+
+## Manejo de Errores
+- Si no se proporcionan palabras clave válidas
+- Si se especifica un espacio inválido
+- Si hay errores en la conexión con Confluence
+- Si no se encuentran resultados
+
+## Notas Técnicas
+- El separador `--` se usa para distinguir entre las palabras clave y el espacio de búsqueda
+- Las palabras clave se procesan para eliminar caracteres especiales y optimizar la búsqueda
+- El sistema utiliza la API de Confluence para realizar las búsquedas
+- Los resultados se formatean para una mejor visualización en Slack
+
 ## Descripción General
 El comando `/tg-search` permite a los usuarios buscar documentación relevante en Confluence utilizando palabras clave. Este comando está diseñado para ser simple y directo, facilitando el acceso rápido a la información necesaria.
 

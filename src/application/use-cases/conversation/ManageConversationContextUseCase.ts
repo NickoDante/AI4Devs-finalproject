@@ -1,9 +1,10 @@
-import { CachePort } from '../../../domain/ports/CachePort';
+import { CachePort, ConversationContext as CacheConversationContext } from '../../../domain/ports/CachePort';
 import { Message } from '../../../domain/models/Message';
 import { Logger } from 'winston';
 
+// Alias para mantener la estructura actual
 export interface ConversationContext {
-  lastMessages: Message[];
+  messages: Message[];
   metadata?: {
     topic?: string;
     startTime?: Date;
@@ -18,6 +19,7 @@ export class ManageConversationContextUseCase {
   private readonly CACHE_NAMESPACE = 'context';
   private readonly DEFAULT_TTL = 1800; // 30 minutos
   private readonly MAX_MESSAGES = 10;
+  private readonly DEFAULT_CONVERSATION_ID = 'default';
 
   constructor(
     private readonly cachePort: CachePort,
@@ -27,14 +29,32 @@ export class ManageConversationContextUseCase {
   async getContext(userId: string): Promise<ConversationContext | null> {
     try {
       const cacheKey = `${this.CACHE_NAMESPACE}:${userId}`;
-      const context = await this.cachePort.getConversationContext(userId);
+      const context = await this.cachePort.getConversationContext(userId, this.DEFAULT_CONVERSATION_ID);
       
       if (!context) {
         this.logger.debug('No se encontró contexto para el usuario', { userId });
         return null;
       }
       
-      return context;
+      // Adaptar al formato requerido por este use case
+      // Convertir los mensajes del formato CacheConversationContext al formato Message
+      const messages: Message[] = context.messages.map(msg => ({
+        content: msg.content,
+        userId: userId,
+        username: 'unknown',
+        channel: 'unknown',
+        timestamp: msg.timestamp,
+        type: msg.role === 'user' ? 'direct_message' : 
+              msg.role === 'system' ? 'command' : 'bot_message'
+      }));
+      
+      return {
+        messages,
+        metadata: {
+          ...context.metadata,
+          topic: context.metadata?.topicId
+        }
+      };
     } catch (error) {
       this.logger.error('Error al obtener contexto de conversación:', error);
       return null;
@@ -49,7 +69,7 @@ export class ManageConversationContextUseCase {
       if (!context) {
         // Crear nuevo contexto si no existe
         context = {
-          lastMessages: [],
+          messages: [],
           metadata: {
             topic: 'general',
             startTime: new Date(),
@@ -61,7 +81,7 @@ export class ManageConversationContextUseCase {
       }
       
       // Actualizar mensajes
-      context.lastMessages = [message, ...context.lastMessages].slice(0, this.MAX_MESSAGES);
+      context.messages = [message, ...context.messages].slice(0, this.MAX_MESSAGES);
       
       // Actualizar metadata
       const metadata = context.metadata || {};
@@ -76,7 +96,7 @@ export class ManageConversationContextUseCase {
       context.metadata = metadata;
       
       // Guardar contexto actualizado
-      await this.cachePort.setConversationContext(userId, context);
+      await this.saveContext(userId, context);
       
       this.logger.debug('Contexto de conversación actualizado', { userId, messageCount: metadata.messageCount });
       
@@ -85,7 +105,7 @@ export class ManageConversationContextUseCase {
       this.logger.error('Error al actualizar contexto de conversación:', error);
       // Devolver un contexto mínimo en caso de error
       return {
-        lastMessages: [message],
+        messages: [message],
         metadata: {
           startTime: new Date(),
           lastUpdateTime: new Date(),
@@ -104,6 +124,33 @@ export class ManageConversationContextUseCase {
       return true;
     } catch (error) {
       this.logger.error('Error al eliminar contexto de conversación:', error);
+      return false;
+    }
+  }
+  
+  // Método auxiliar para convertir y guardar el contexto en el formato esperado por CachePort
+  private async saveContext(userId: string, context: ConversationContext): Promise<boolean> {
+    try {
+      // Convertir al formato esperado por CachePort
+      const cacheContext: CacheConversationContext = {
+        userId,
+        conversationId: this.DEFAULT_CONVERSATION_ID,
+        messages: context.messages.map(msg => ({
+          // Mapear el tipo de mensaje a un rol adecuado
+          role: msg.type === 'bot_message' ? 'assistant' :
+                msg.type === 'command' ? 'system' : 'user',
+          content: msg.content,
+          timestamp: msg.timestamp
+        })),
+        metadata: {
+          lastInteraction: new Date(),
+          topicId: context.metadata?.topic
+        }
+      };
+      
+      return await this.cachePort.saveConversationContext(cacheContext);
+    } catch (error) {
+      this.logger.error('Error al guardar contexto en caché:', error);
       return false;
     }
   }

@@ -1,4 +1,21 @@
-import { ConversationContext } from '../../application/use-cases/ManageConversationContextUseCase';
+/**
+ * Contexto de conversación
+ */
+export interface ConversationContext {
+  userId: string;
+  conversationId: string;
+  messages: {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+    timestamp: Date;
+  }[];
+  metadata?: {
+    lastInteraction: Date;
+    topicId?: string;
+    relevantDocuments?: string[];
+    [key: string]: any;
+  };
+}
 
 export interface CacheOptions {
     ttl?: number; // Tiempo de vida en segundos
@@ -69,10 +86,20 @@ export interface CachePort {
     /**
      * Guarda el contexto de una conversación
      */
-    setConversationContext(userId: string, context: ConversationContext): Promise<void>;
+    saveConversationContext(context: ConversationContext): Promise<boolean>;
 
     /**
      * Obtiene el contexto de una conversación
      */
-    getConversationContext(userId: string): Promise<ConversationContext | null>;
+    getConversationContext(userId: string, conversationId: string): Promise<ConversationContext | null>;
+
+    /**
+     * Elimina el contexto de una conversación
+     */
+    removeConversationContext(userId: string, conversationId: string): Promise<boolean>;
+
+    /**
+     * Obtiene las conversaciones activas de un usuario
+     */
+    getActiveConversations(userId: string): Promise<string[]>;
 } 

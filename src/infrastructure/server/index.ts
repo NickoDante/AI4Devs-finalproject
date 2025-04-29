@@ -3,10 +3,12 @@ import { App, LogLevel } from '@slack/bolt';
 import { registerCommands } from '../../interfaces/slack/commands';
 import { HealthCheckService } from '../health/HealthCheckService';
 import { container } from '../di';
+import { ValidationMiddleware } from '../middleware/ValidationMiddleware';
 
 export const startServer = async () => {
   const app = express();
   const port = Number(process.env.PORT) || 3001;
+  const logger = container.getLogger();
 
   // Configuración básica de Express
   app.use(express.json());
@@ -21,8 +23,14 @@ export const startServer = async () => {
     logLevel: LogLevel.DEBUG // Añadimos logging detallado
   });
 
+  // Crear instancia de ValidationMiddleware
+  const validationMiddleware = new ValidationMiddleware(logger);
+
+  // Obtener instancia de CachePort
+  const cacheAdapter = container.getCacheAdapter();
+
   // Registrar comandos
-  registerCommands(slackApp);
+  registerCommands(slackApp, logger, validationMiddleware, cacheAdapter);
 
   // Crear servicio de health check
   const healthCheckService = new HealthCheckService(

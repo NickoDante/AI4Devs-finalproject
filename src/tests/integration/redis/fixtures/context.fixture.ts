@@ -1,4 +1,4 @@
-import { ConversationContext } from '../../../../application/use-cases/ManageConversationContextUseCase';
+import { ConversationContext } from '../../../../domain/ports/CachePort';
 import { Message } from '../../../../domain/models/Message';
 import { createTestMessage } from '../../mongodb/fixtures/message.fixture';
 
@@ -6,17 +6,22 @@ import { createTestMessage } from '../../mongodb/fixtures/message.fixture';
  * Genera un contexto de conversación de prueba con valores predeterminados
  */
 export function createTestContext(overrides: Partial<ConversationContext> = {}): ConversationContext {
-  const defaultMessages: Message[] = Array.from({ length: 3 }).map((_, index) => {
-    return createTestMessage({
+  const defaultMessages = Array.from({ length: 3 }).map((_, index) => {
+    const role = index === 0 ? 'system' : index % 2 === 0 ? 'assistant' : 'user';
+    return {
+      role: role as 'system' | 'user' | 'assistant',
       content: `Test message ${index}`,
       timestamp: new Date(Date.now() - index * 60000) // Cada mensaje es 1 minuto más antiguo
-    });
+    };
   });
 
   return {
-    lastMessages: defaultMessages,
+    userId: `user_${Date.now()}`,
+    conversationId: `conv_${Date.now()}`,
+    messages: defaultMessages,
     metadata: {
-      topic: 'test',
+      topicId: 'test',
+      lastInteraction: new Date(),
       startTime: new Date(Date.now() - 3600000), // 1 hora atrás
       lastUpdateTime: new Date(),
       messageCount: defaultMessages.length,
@@ -67,4 +72,30 @@ export function createTestListValues(count: number = 5): any[] {
       }
     };
   });
-} 
+}
+
+export const mockContext: ConversationContext = {
+  userId: 'U123456',
+  conversationId: 'conv_123456',
+  messages: [
+    {
+      role: 'system',
+      content: 'Eres un asistente útil y servicial.',
+      timestamp: new Date('2025-05-01T10:00:00Z')
+    },
+    {
+      role: 'user',
+      content: '¿Cómo solicito vacaciones?',
+      timestamp: new Date('2025-05-01T10:01:00Z')
+    },
+    {
+      role: 'assistant',
+      content: 'Para solicitar vacaciones, debes seguir estos pasos...',
+      timestamp: new Date('2025-05-01T10:01:30Z')
+    }
+  ],
+  metadata: {
+    lastInteraction: new Date('2025-05-01T10:01:30Z'),
+    topicId: 'topic_123456'
+  }
+}; 

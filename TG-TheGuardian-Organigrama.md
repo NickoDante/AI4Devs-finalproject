@@ -106,10 +106,10 @@ Etapa 2
   que permitirá a los usuarios buscar documentos mediante keywords,
   incluyendo la integración inicial con la API de Confluence.
 * Objetivos:
-- ( ) Implementar comando /tg-search base
-- ( ) Crear sistema de búsqueda por keywords
-- ( ) Implementar conexión con API de Confluence
-- ( ) Configurar sistema de indexación de documentos
+- (✅) Implementar comando /tg-search base
+- (✅) Crear sistema de búsqueda por keywords
+- (✅) Implementar conexión con API de Confluence
+- (✅) Configurar sistema de indexación de documentos
 
 * Martes 6 de Mayo, 2025
 * Semana #3

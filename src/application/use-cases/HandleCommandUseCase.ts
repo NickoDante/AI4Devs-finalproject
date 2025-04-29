@@ -1,7 +1,6 @@
 import { Message } from '../../domain/models/Message';
 import { BotResponse } from '../../domain/models/BotResponse';
-import { ManageKnowledgeUseCase } from './ManageKnowledgeUseCase';
-import { KnowledgeContent } from '../../domain/ports/KnowledgePort';
+import { KnowledgePort, Document, SearchResult } from '../../domain/ports/KnowledgePort';
 
 export enum CommandType {
   HELP = 'help',
@@ -18,7 +17,7 @@ interface Command {
 
 export class HandleCommandUseCase {
   constructor(
-    private readonly knowledgeManager: ManageKnowledgeUseCase
+    private readonly knowledgePort: KnowledgePort
   ) {}
 
   async execute(message: Message): Promise<BotResponse> {
@@ -91,7 +90,7 @@ export class HandleCommandUseCase {
     }
 
     const query = args.join(' ');
-    const results = await this.knowledgeManager.searchKnowledge(query);
+    const results = await this.knowledgePort.searchDocuments(query);
 
     if (results.length === 0) {
       return {
@@ -103,15 +102,15 @@ export class HandleCommandUseCase {
 
     const content = results
       .slice(0, 3)
-      .map(r => `• ${r.content.substring(0, 200)}... \n_Fuente: ${r.source}_`)
+      .map((r: SearchResult) => `• ${r.content.substring(0, 200)}... \n_Fuente: ${r.source || 'Desconocido'}_`)
       .join('\n\n');
 
     return {
       content,
       type: 'text',
       metadata: {
-        confidence: Math.max(...results.slice(0, 3).map(r => r.relevance)),
-        source: results[0].source
+        confidence: Math.max(...results.slice(0, 3).map((r: SearchResult) => r.relevance)),
+        source: results[0].source || 'Base de Conocimiento'
       }
     };
   }
@@ -126,17 +125,23 @@ export class HandleCommandUseCase {
       };
     }
 
-    const knowledgeContent: KnowledgeContent = {
+    const now = new Date();
+    const document: Document = {
+      id: `doc_${Date.now()}`,
       title: content[0],
       content: content[1],
       source: content[2],
-      tags: content[3]?.split(',').map(t => t.trim())
+      tags: content[3]?.split(',').map(t => t.trim()),
+      createdAt: now,
+      updatedAt: now
     };
 
-    await this.knowledgeManager.addKnowledge(knowledgeContent);
+    const success = await this.knowledgePort.indexDocument(document);
 
     return {
-      content: 'Conocimiento agregado exitosamente.',
+      content: success 
+        ? 'Conocimiento agregado exitosamente.' 
+        : 'Error al agregar conocimiento.',
       type: 'text',
       metadata: { confidence: 1 }
     };
@@ -153,17 +158,31 @@ export class HandleCommandUseCase {
     }
 
     const id = content[0];
-    const knowledgeContent: KnowledgeContent = {
+    const existingDoc = await this.knowledgePort.getDocument(id);
+    
+    if (!existingDoc) {
+      return {
+        content: `No se encontró un documento con ID: ${id}`,
+        type: 'error',
+        metadata: { error: true }
+      };
+    }
+
+    const document: Document = {
+      ...existingDoc,
       title: content[1],
       content: content[2],
       source: content[3],
-      tags: content[4]?.split(',').map(t => t.trim())
+      tags: content[4]?.split(',').map(t => t.trim()),
+      updatedAt: new Date()
     };
 
-    await this.knowledgeManager.updateKnowledge(id, knowledgeContent);
+    const success = await this.knowledgePort.indexDocument(document);
 
     return {
-      content: 'Conocimiento actualizado exitosamente.',
+      content: success 
+        ? 'Conocimiento actualizado exitosamente.' 
+        : 'Error al actualizar conocimiento.',
       type: 'text',
       metadata: { confidence: 1 }
     };

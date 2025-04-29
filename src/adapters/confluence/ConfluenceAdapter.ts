@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { KnowledgePort, SearchResult, KnowledgeContent } from '../../domain/ports/KnowledgePort';
+import { KnowledgePort, SearchResult, KnowledgeContent, Document } from '../../domain/ports/KnowledgePort';
 import { Logger } from 'winston';
 
 export class ConfluenceAdapter implements KnowledgePort {
@@ -31,7 +31,110 @@ export class ConfluenceAdapter implements KnowledgePort {
     }
   }
 
-  async searchKnowledge(query: string, spaceKey?: string): Promise<SearchResult[]> {
+  // Implementación de métodos requeridos por KnowledgePort
+  async searchDocuments(query: string, limit: number = 10): Promise<SearchResult[]> {
+    return this.searchKnowledge(query, this.spaceKey, limit);
+  }
+
+  async getDocument(documentId: string): Promise<Document | null> {
+    try {
+      this.logger.info(`Obteniendo documento de Confluence: ${documentId}`);
+      
+      const response = await axios.get(
+        `${this.baseUrl}/rest/api/content/${documentId}`,
+        { 
+          auth: this.auth,
+          params: {
+            expand: 'body.storage,version,space,metadata.labels'
+          }
+        }
+      );
+
+      if (!response.data) {
+        this.logger.info(`No se encontró documento con ID: ${documentId}`);
+        return null;
+      }
+
+      const result = response.data;
+      const now = new Date();
+      
+      const document: Document = {
+        id: result.id,
+        title: result.title,
+        content: result.body.storage.value,
+        url: `${this.baseUrl}${result._links.webui}`,
+        source: `Confluence: ${result.space.name}`,
+        author: result._expandable?.creator || 'Unknown',
+        createdAt: result.history?.createdDate ? new Date(result.history.createdDate) : now,
+        updatedAt: result.version?.when ? new Date(result.version.when) : now,
+        tags: result.metadata?.labels?.results?.map((label: any) => label.name) || [],
+        categories: [result.space.name],
+        metadata: {
+          spaceKey: result.space.key,
+          version: result.version.number,
+          type: result.type
+        }
+      };
+
+      return document;
+    } catch (error) {
+      this.logger.error('Error al obtener documento de Confluence:', error);
+      return null;
+    }
+  }
+
+  async indexDocument(document: Document): Promise<boolean> {
+    try {
+      // Verificar si el documento ya existe
+      if (document.id && document.id !== `doc_${Date.now()}`) {
+        // Actualizar documento existente
+        await this.updateKnowledgeDocument(document);
+      } else {
+        // Crear nuevo documento
+        await this.createKnowledgeDocument(document);
+      }
+      return true;
+    } catch (error) {
+      this.logger.error('Error al indexar documento en Confluence:', error);
+      return false;
+    }
+  }
+
+  async deleteDocument(documentId: string): Promise<boolean> {
+    try {
+      this.logger.info(`Eliminando documento de Confluence: ${documentId}`);
+      
+      await axios.delete(
+        `${this.baseUrl}/rest/api/content/${documentId}`,
+        { auth: this.auth }
+      );
+
+      this.logger.info(`Documento eliminado exitosamente de Confluence: ${documentId}`);
+      return true;
+    } catch (error) {
+      this.logger.error('Error al eliminar documento de Confluence:', error);
+      return false;
+    }
+  }
+
+  async updateDocument(document: Document): Promise<boolean> {
+    return this.indexDocument(document);
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await axios.get(`${this.baseUrl}/rest/api/space/${this.spaceKey}`, {
+        auth: this.auth
+      });
+      return response.status === 200;
+    } catch (error) {
+      this.logger.error('Error en health check de Confluence:', error);
+      return false;
+    }
+  }
+
+  // Implementaciones existentes y métodos auxiliares
+  async searchKnowledge(query: string, spaceKey?: string, limit: number = 10): Promise<SearchResult[]> {
     try {
       const targetSpaceKey = spaceKey || this.spaceKey;
       this.logger.info(`Iniciando búsqueda en Confluence:`, {
@@ -59,7 +162,7 @@ export class ConfluenceAdapter implements KnowledgePort {
         params: {
           cql: `text ~ "${query}" AND space = "${targetSpaceKey}"`,
           expand: 'body.storage,version,space,metadata.labels',
-          limit: 10
+          limit: limit
         }
       });
 
@@ -74,16 +177,17 @@ export class ConfluenceAdapter implements KnowledgePort {
       }
 
       const results = response.data.results.map((result: any) => ({
-        id: result.id,
+        documentId: result.id,
+        title: result.title,
         content: result.body.storage.value,
+        url: `${this.baseUrl}${result._links.webui}`,
         relevance: this.calculateRelevance(result, query),
         source: `${result.space.name} > ${result.title}`,
-        lastUpdated: new Date(result.version.when),
+        snippet: this.generateSnippet(result.body.storage.value, query),
         metadata: {
           spaceKey: result.space.key,
           version: result.version.number,
-          labels: result.metadata?.labels?.results?.map((label: any) => label.name) || [],
-          url: `${this.baseUrl}${result._links.webui}`
+          labels: result.metadata?.labels?.results?.map((label: any) => label.name) || []
         }
       }));
 
@@ -105,90 +209,92 @@ export class ConfluenceAdapter implements KnowledgePort {
     }
   }
 
-  async saveKnowledge(content: KnowledgeContent): Promise<void> {
-    try {
-      this.logger.info(`Guardando documento en Confluence: ${content.title}`);
+  private async createKnowledgeDocument(document: Document): Promise<string> {
+    this.logger.info(`Creando documento en Confluence: ${document.title}`);
       
-      const response = await axios.post(
-        `${this.baseUrl}/rest/api/content`,
-        {
-          type: 'page',
-          title: content.title,
-          space: { key: this.spaceKey },
-          body: {
-            storage: {
-              value: content.content,
-              representation: 'storage'
-            }
-          },
-          metadata: {
-            labels: content.tags?.map(tag => ({ name: tag })) || []
+    const response = await axios.post(
+      `${this.baseUrl}/rest/api/content`,
+      {
+        type: 'page',
+        title: document.title,
+        space: { key: document.metadata?.spaceKey || this.spaceKey },
+        body: {
+          storage: {
+            value: document.content,
+            representation: 'storage'
           }
         },
-        { auth: this.auth }
-      );
+        metadata: {
+          labels: document.tags?.map(tag => ({ name: tag })) || []
+        }
+      },
+      { auth: this.auth }
+    );
 
-      if (!response.data.id) {
-        throw new Error('Error al crear la página en Confluence');
-      }
-
-      this.logger.info(`Documento guardado exitosamente en Confluence con ID: ${response.data.id}`);
-
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        this.logger.error('Error de API de Confluence al guardar:', {
-          status: error.response?.status,
-          message: error.message,
-          data: error.response?.data
-        });
-      } else {
-        this.logger.error('Error inesperado al guardar en Confluence:', error);
-      }
-      throw new Error('Error al guardar en Confluence. Por favor, intenta más tarde.');
+    if (!response.data.id) {
+      throw new Error('Error al crear la página en Confluence');
     }
+
+    this.logger.info(`Documento creado exitosamente en Confluence con ID: ${response.data.id}`);
+    return response.data.id;
+  }
+
+  private async updateKnowledgeDocument(document: Document): Promise<void> {
+    this.logger.info(`Actualizando documento en Confluence: ${document.id}`);
+    
+    const currentVersion = await this.getCurrentVersion(document.id);
+    
+    await axios.put(
+      `${this.baseUrl}/rest/api/content/${document.id}`,
+      {
+        version: {
+          number: currentVersion + 1
+        },
+        title: document.title,
+        type: 'page',
+        body: {
+          storage: {
+            value: document.content,
+            representation: 'storage'
+          }
+        },
+        metadata: {
+          labels: document.tags?.map(tag => ({ name: tag })) || []
+        }
+      },
+      { auth: this.auth }
+    );
+
+    this.logger.info(`Documento actualizado exitosamente en Confluence: ${document.id}`);
+  }
+
+  async saveKnowledge(content: KnowledgeContent): Promise<void> {
+    const document: Document = {
+      id: `doc_${Date.now()}`,
+      title: content.title,
+      content: content.content,
+      tags: content.tags,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await this.indexDocument(document);
   }
 
   async updateKnowledge(id: string, content: KnowledgeContent): Promise<void> {
-    try {
-      this.logger.info(`Actualizando documento en Confluence: ${id}`);
-      
-      const currentVersion = await this.getCurrentVersion(id);
-      
-      await axios.put(
-        `${this.baseUrl}/rest/api/content/${id}`,
-        {
-          version: {
-            number: currentVersion + 1
-          },
-          title: content.title,
-          type: 'page',
-          body: {
-            storage: {
-              value: content.content,
-              representation: 'storage'
-            }
-          },
-          metadata: {
-            labels: content.tags?.map(tag => ({ name: tag })) || []
-          }
-        },
-        { auth: this.auth }
-      );
-
-      this.logger.info(`Documento actualizado exitosamente en Confluence: ${id}`);
-
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        this.logger.error('Error de API de Confluence al actualizar:', {
-          status: error.response?.status,
-          message: error.message,
-          data: error.response?.data
-        });
-      } else {
-        this.logger.error('Error inesperado al actualizar en Confluence:', error);
-      }
-      throw new Error('Error al actualizar en Confluence. Por favor, intenta más tarde.');
+    const existingDoc = await this.getDocument(id);
+    if (!existingDoc) {
+      throw new Error(`No se encontró el documento con ID: ${id}`);
     }
+    
+    const document: Document = {
+      ...existingDoc,
+      title: content.title,
+      content: content.content,
+      tags: content.tags,
+      updatedAt: new Date()
+    };
+    
+    await this.indexDocument(document);
   }
 
   private async getCurrentVersion(id: string): Promise<number> {
@@ -227,5 +333,34 @@ export class ConfluenceAdapter implements KnowledgePort {
 
     // Normalizar relevancia entre 0 y 1
     return Math.min(matches / (queryTerms.length * 2), 1);
+  }
+
+  private generateSnippet(content: string, query: string): string {
+    try {
+      // Eliminar etiquetas HTML
+      const plainText = content.replace(/<[^>]*>/g, ' ').trim();
+      
+      // Encontrar contexto alrededor de la primera aparición de la consulta
+      const queryLower = query.toLowerCase();
+      const textLower = plainText.toLowerCase();
+      const index = textLower.indexOf(queryLower);
+      
+      if (index === -1) {
+        // Si no se encuentra exactamente, devolver el principio del texto
+        return plainText.substring(0, 150) + '...';
+      }
+      
+      // Calcular el rango para el snippet
+      const start = Math.max(0, index - 75);
+      const end = Math.min(plainText.length, index + queryLower.length + 75);
+      
+      // Añadir puntos suspensivos si es necesario
+      const prefix = start > 0 ? '...' : '';
+      const suffix = end < plainText.length ? '...' : '';
+      
+      return prefix + plainText.substring(start, end) + suffix;
+    } catch (error) {
+      return content.substring(0, 150) + '...';
+    }
   }
 } 

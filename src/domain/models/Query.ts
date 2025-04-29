@@ -4,7 +4,7 @@ export interface Query {
   originalText: string;
   normalizedText: string;
   language: 'es' | 'en';
-  type: 'search' | 'admin' | 'summary' | 'conversation' | 'unknown';
+  type: 'search' | 'admin' | 'summary' | 'conversation' | 'question' | 'unknown';
   intent?: string;
   command?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -16,6 +16,7 @@ export interface Query {
   // Relaciones
   userId: string; // Relación con User
   entityExtractions?: EntityExtraction[]; // Relación con EntityExtraction
+  context?: string; // Contexto de la conversación para preguntas
 }
 
 export interface EntityExtraction {

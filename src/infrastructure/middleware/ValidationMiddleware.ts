@@ -55,9 +55,8 @@ export class ValidationMiddleware {
     }
 
     private validateQuestionCommand(text: string): void {
-        if (!text.trim().endsWith('?')) {
-            throw new ValidationError('El texto debe terminar con un signo de interrogación (?).');
-        }
+        // Solo validamos que tenga contenido (ya validado en validateBaseCommand)
+        return;
     }
 
     private validateSummaryCommand(text: string): void {
@@ -98,7 +97,7 @@ export class ValidationMiddleware {
                 if (error instanceof ValidationError) {
                     await res.json({ text: `⚠️ ${error.message}` });
                 } else {
-                    await res.json({ text: '⚠️ Error en la validación del comando.' });
+                    await res.json({ text: '⚠️ Error en la validación del comando. Intentalo de nuevo' });
                 }
             }
         };

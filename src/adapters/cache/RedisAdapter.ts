@@ -1,12 +1,12 @@
-import { CachePort, CacheOptions } from '../../domain/ports/CachePort';
+import { CachePort, CacheOptions, ConversationContext } from '../../domain/ports/CachePort';
 import { Redis } from 'ioredis';
 import { Logger } from 'winston';
-import { ConversationContext } from '../../application/use-cases/ManageConversationContextUseCase';
 
 export class RedisAdapter implements CachePort {
     private readonly defaultTTL = 3600; // 1 hora por defecto
     private readonly keyPrefix = 'tg:'; // Prefijo para todas las claves
     private readonly contextNamespace = 'context'; // Namespace para contextos de conversación
+    private readonly activeConvsNamespace = 'activeConvs'; // Namespace para conversaciones activas
 
     constructor(
         private redis: Redis,
@@ -209,14 +209,85 @@ export class RedisAdapter implements CachePort {
         }
     }
 
-    async setConversationContext(userId: string, context: ConversationContext): Promise<void> {
-        await this.set(userId, context, {
-            namespace: this.contextNamespace,
-            ttl: 1800 // 30 minutos
-        });
+    // Implementación de los nuevos métodos requeridos por CachePort
+    async saveConversationContext(context: ConversationContext): Promise<boolean> {
+        try {
+            const key = `${context.userId}:${context.conversationId}`;
+            await this.set(key, context, {
+                namespace: this.contextNamespace,
+                ttl: 1800 // 30 minutos
+            });
+
+            // Actualizar la lista de conversaciones activas
+            await this.addToActiveConversations(context.userId, context.conversationId);
+            
+            return true;
+        } catch (error) {
+            this.logger.error('Error al guardar contexto de conversación:', error);
+            return false;
+        }
     }
 
-    async getConversationContext(userId: string): Promise<ConversationContext | null> {
-        return await this.get<ConversationContext>(userId, this.contextNamespace);
+    async getConversationContext(userId: string, conversationId: string): Promise<ConversationContext | null> {
+        try {
+            const key = `${userId}:${conversationId}`;
+            return await this.get<ConversationContext>(key, this.contextNamespace);
+        } catch (error) {
+            this.logger.error('Error al obtener contexto de conversación:', error);
+            return null;
+        }
+    }
+
+    async removeConversationContext(userId: string, conversationId: string): Promise<boolean> {
+        try {
+            const key = `${userId}:${conversationId}`;
+            await this.delete(this.getFullKey(key, this.contextNamespace));
+            
+            // Actualizar la lista de conversaciones activas
+            await this.removeFromActiveConversations(userId, conversationId);
+            
+            return true;
+        } catch (error) {
+            this.logger.error('Error al eliminar contexto de conversación:', error);
+            return false;
+        }
+    }
+
+    async getActiveConversations(userId: string): Promise<string[]> {
+        try {
+            const key = userId;
+            return await this.getList(key, 0, -1) as string[];
+        } catch (error) {
+            this.logger.error('Error al obtener conversaciones activas:', error);
+            return [];
+        }
+    }
+
+    private async addToActiveConversations(userId: string, conversationId: string): Promise<void> {
+        // Añadir al inicio de la lista (las más recientes primero)
+        await this.redis.lpush(
+            this.getFullKey(userId, this.activeConvsNamespace),
+            conversationId
+        );
+        
+        // Limitar a 10 conversaciones por usuario (mantener solo las más recientes)
+        await this.redis.ltrim(
+            this.getFullKey(userId, this.activeConvsNamespace),
+            0, 9
+        );
+        
+        // Establecer TTL de 7 días para la lista de conversaciones activas
+        await this.redis.expire(
+            this.getFullKey(userId, this.activeConvsNamespace),
+            60 * 60 * 24 * 7
+        );
+    }
+
+    private async removeFromActiveConversations(userId: string, conversationId: string): Promise<void> {
+        await this.redis.lrem(
+            this.getFullKey(userId, this.activeConvsNamespace),
+            0, // Eliminar todas las ocurrencias
+            conversationId
+        );
     }
 } 

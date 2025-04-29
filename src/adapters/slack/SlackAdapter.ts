@@ -8,6 +8,8 @@ import { CacheManager } from '../../infrastructure/cache/CacheManager';
 import { CachePort } from '../../domain/ports/CachePort';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { container } from '../../infrastructure/di';
+import { Query } from '../../domain/models/Query';
+import { createHash } from 'crypto';
 
 interface SlackMessageEvent {
   user?: string;
@@ -76,7 +78,15 @@ export class SlackAdapter implements MessagePort {
       } catch (error) {
         console.error('Error processing direct message:', error);
         await say({
-          text: 'Lo siento, ocurrió un error al procesar tu mensaje.',
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "❌ *Error al procesar tu mensaje.* Ha ocurrido un problema. Por favor, inténtalo de nuevo en unos momentos."
+              }
+            }
+          ],
           thread_ts: message.ts
         });
       }
@@ -105,7 +115,17 @@ export class SlackAdapter implements MessagePort {
         await say(this.formatResponse(botResponse));
       } catch (error) {
         console.error('Error processing mention:', error);
-        await say('Lo siento, ocurrió un error al procesar tu mención.');
+        await say({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "❌ *Error al procesar tu mención.* Ha ocurrido un problema. Por favor, inténtalo de nuevo en unos momentos."
+              }
+            }
+          ]
+        });
       }
     });
   }
@@ -141,7 +161,17 @@ export class SlackAdapter implements MessagePort {
         });
       } catch (error) {
         this.logger.error('Error en comando search:', error);
-        await respond('Lo siento, ocurrió un error al procesar tu búsqueda.');
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "❌ *Error al procesar tu búsqueda.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con términos de búsqueda diferentes."
+              }
+            }
+          ]
+        });
       }
     });
 
@@ -157,7 +187,17 @@ export class SlackAdapter implements MessagePort {
         });
       } catch (error) {
         this.logger.error('Error en comando question:', error);
-        await respond('Lo siento, ocurrió un error al procesar tu pregunta.');
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
+              }
+            }
+          ]
+        });
       }
     });
 
@@ -173,7 +213,17 @@ export class SlackAdapter implements MessagePort {
         });
       } catch (error) {
         this.logger.error('Error en comando summary:', error);
-        await respond('Lo siento, ocurrió un error al generar el resumen.');
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "❌ *Error al generar el resumen.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con un enlace diferente."
+              }
+            }
+          ]
+        });
       }
     });
   }
@@ -221,17 +271,35 @@ export class SlackAdapter implements MessagePort {
           break;
 
         case '/tg-question':
+          // Preparar la consulta para el procesamiento natural
+          const query: Query = {
+            id: crypto.randomUUID(),
+            queryHash: createHash('sha256').update(message.content).digest('hex'),
+            originalText: message.content,
+            normalizedText: message.content.toLowerCase().trim(),
+            language: 'es', // Por ahora hardcoded, luego detectar
+            type: 'question',
+            command: '/tg-question',
+            status: 'pending',
+            userId: message.userId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+          // Respuesta temporal mientras se procesa
           response = {
-            content: `❓ *Nueva Pregunta:* "${message.content}"\n\nAnalizando tu consulta...\n• Pregunta: ${message.content}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
+            content: `🤔 *Analizando tu consulta:*\n"${message.content}"\n\n_Procesando..._`,
             type: 'text',
             metadata: {
               source: 'Sistema de preguntas y respuestas',
-              confidence: 0.90
+              confidence: 0.90,
+              query: query
             }
           };
           break;
 
         case '/tg-summary':
+          // Respuesta temporal mientras se procesa (restaurando la funcionalidad original)
           response = {
             content: `📝 *Solicitud de Resumen:* "${message.content}"\n\nGenerando resumen del documento...\n• Documento: ${message.content}\n• Tipo: ${message.content.endsWith('.pdf') ? 'PDF' : 'Link'}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
             type: 'text',
@@ -246,12 +314,14 @@ export class SlackAdapter implements MessagePort {
           throw new Error(`Comando no soportado: ${commandType}`);
       }
 
-      // Guardar en caché
+      // Guardar en caché si no es una pregunta (las preguntas no se cachean por ahora)
+      if (commandType !== '/tg-question') {
       await this.cacheManager.setCachedResponse(
         commandType,
         command.text,
         response
       );
+      }
 
       this.logger.info('Respuesta generada:', {
         commandType,

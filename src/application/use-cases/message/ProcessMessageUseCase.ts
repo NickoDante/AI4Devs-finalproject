@@ -133,32 +133,47 @@ export class ProcessMessageUseCase {
 
     const header = `🔍 *Resultados para "${query}" en ${spaceName || spaceKey}:*\n`;
     
-    const formattedResults = results
-      .sort((a, b) => b.relevance - a.relevance)
-      .map(result => {
-        // Limpiar el contenido de tags HTML y caracteres especiales
-        const cleanContent = result.content
-          .replace(/<[^>]*>/g, '') // Remover tags HTML
-          .replace(/&[^;]+;/g, '') // Remover entidades HTML
-          .replace(/\s+/g, ' ') // Normalizar espacios
-          .trim();
+    // Ordenar resultados por relevancia
+    const sortedResults = results.sort((a, b) => b.relevance - a.relevance);
+    
+    // Determinar si hay más de 4 resultados
+    const hasMoreResults = sortedResults.length > 4;
+    
+    // Limitar a 4 resultados
+    const limitedResults = sortedResults.slice(0, 4);
+    
+    const formattedResults = limitedResults.map(result => {
+      // Limpiar el contenido de tags HTML y caracteres especiales
+      const cleanContent = result.content
+        .replace(/<[^>]*>/g, '') // Remover tags HTML
+        .replace(/&[^;]+;/g, '') // Remover entidades HTML
+        .replace(/\s+/g, ' ') // Normalizar espacios
+        .trim();
 
-        // Formatear el contenido para mostrar solo las primeras 200 caracteres
-        const contentPreview = cleanContent.length > 200 
-          ? cleanContent.substring(0, 200) + '...'
-          : cleanContent;
+      // Formatear el contenido para mostrar solo las primeras 200 caracteres
+      const contentPreview = cleanContent.length > 200 
+        ? cleanContent.substring(0, 200) + '...'
+        : cleanContent;
 
-        // Formatear las etiquetas o mostrar mensaje si no hay
-        const labels = result.metadata.labels && result.metadata.labels.length > 0
-          ? result.metadata.labels.join(', ')
-          : 'Sin etiquetas';
+      // Formatear las etiquetas o mostrar mensaje si no hay
+      const labels = result.metadata && result.metadata.labels && result.metadata.labels.length > 0
+        ? result.metadata.labels.join(', ')
+        : 'Sin etiquetas';
 
-        return `📄 *${result.source}*\n` +
-               `🔗 <${result.metadata.url}|Ver documento>\n` +
-               `📝 ${contentPreview}\n` +
-               `🏷️ ${labels}`;
-      }).join('\n\n');
+      // Obtener la URL del documento primero de metadata.url y luego de result.url
+      const documentUrl = result.metadata?.url || result.url || '';
+      
+      return `📄 *${result.source}*\n` +
+             `🔗 <${documentUrl}|Ver documento>\n` +
+             `📝 ${contentPreview}\n` +
+             `🏷️ ${labels}`;
+    }).join('\n\n');
 
-    return `${header}\n${formattedResults}`;
+    // Agregar mensaje cuando hay más resultados
+    const moreResultsMessage = hasMoreResults 
+      ? `\n\n👀 *¡Hey! ¡Necesito más ojos!* Encontré ${results.length} resultados pero solo te estoy mostrando 4. ¿No encontraste lo que buscabas? Hay más información en Confluence esperándote. ¡Ingresa directamente y explora más a fondo!`
+      : '';
+
+    return `${header}\n${formattedResults}${moreResultsMessage}`;
   }
 } 

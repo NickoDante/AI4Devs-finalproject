@@ -27,10 +27,11 @@ Chatbot integrado en Slack que permite consultar documentación técnica en Conf
 
 ### **0.4. URL del proyecto:**
 
-<!-- Puede ser pública o privada, en cuyo caso deberás compartir los accesos de manera segura. Puedes enviarlos a [alvaro@lidr.co](mailto:alvaro@lidr.co) usando algún servicio como [onetimesecret](https://onetimesecret.com/).
-** 28 - Abril - 2025 ** -->
+El siguiente link lleva a una carpeta en Drive, en donde se encontrarán todos los videos del funcionamiento del proyecto:
 
-### 0.5. URL o archivo comprimido del repositorio
+https://drive.google.com/drive/folders/1JLF_fRUH6usgmcGEEP4nldCSafJquKoA?usp=sharing
+
+### **0.5. URL o archivo comprimido del repositorio**
 
 https://github.com/NickoDante/AI4Devs-finalproject
 
@@ -38,7 +39,7 @@ https://github.com/NickoDante/AI4Devs-finalproject
 
 ## 1. Descripción general del producto
 
-TG: The Guardian es un chatbot corporativo inteligente diseñado específicamente para Teravision Games, que se integra seamlessly with Slack and Confluence para proporcionar acceso rápido y eficiente al conocimiento y la documentación interna de la empresa. Representado por la icónica mascota de múltiples ojos de la compañía, este asistente virtual aprovecha tecnologías de procesamiento de lenguaje natural para entender consultas conversacionales, localizar información relevante, y presentarla de manera estructurada y accesible. 
+TG: The Guardian es un chatbot corporativo inteligente diseñado específicamente para Teravision Games, que se integra con Slack y Confluence para proporcionar acceso rápido y eficiente al conocimiento y la documentación interna de la empresa. Representado por la icónica mascota de múltiples ojos de la compañía, este asistente virtual aprovecha tecnologías de procesamiento de lenguaje natural para entender consultas conversacionales, localizar información relevante, y presentarla de manera estructurada y accesible. 
 
 El sistema actúa como intermediario entre los empleados y la base de documentación corporativa, eliminando la necesidad de navegar manualmente a través de múltiples páginas de Confluence para encontrar información específica. The Guardian también puede resumir documentos extensos, responder preguntas administrativas frecuentes, y está diseñado para crecer en capacidades a medida que comprende mejor el contexto único de Teravision Games y sus procesos internos.
 
@@ -651,8 +652,37 @@ export OPENAI_API_KEY=sk-xxxxxxxxxxxx
 
 ### **2.6. Tests**
 
-<!-- Describe brevemente algunos de los tests realizados
-** 28 - Abril - 2025 **-->
+#### Funcionalidad: Comando de búsqueda "/tg-search":
+Para garantizar la correcta funcionalidad del comando de búsqueda en Confluence, implementamos una serie de pruebas unitarias que verifican:
+
+1. **Validación de entradas**: 
+   - Rechazo apropiado de entradas vacías o que solo contienen espacios en blanco
+   - Identificación de comandos mal formados
+
+2. **Manejo de espacios predeterminados**:
+   - Uso correcto del espacio TKA como valor predeterminado cuando no se especifica otro
+   - Procesamiento adecuado de consultas con múltiples palabras clave sin especificación de espacio
+   - Manejo correcto de consultas con una sola palabra clave
+
+3. **Validación de espacios específicos**:
+   - Extracción correcta del espacio y palabras clave cuando se usa el formato "keywords -- SPACE"
+   - Validación de espacios existentes (TKA, NVP) y rechazo de espacios inválidos
+   - Verificación de mensaje de error apropiado cuando se especifica un espacio no válido
+
+4. **Manejo de errores**:
+   - Gestión adecuada de errores inesperados en el proceso de extracción
+   - Rechazo de caracteres especiales no válidos en las palabras clave
+   - Mensajes de error claros y orientados al usuario
+
+Estas pruebas garantizan que el comando de búsqueda funcione de manera robusta, proporcionando resultados relevantes y manejando adecuadamente los casos de error.
+
+#### Funcionalidad: Comando de pregunta "/tg-question":
+
+(EN CONSTRUCCION)
+
+#### Funcionalidad: Comando de resumen "/tg-summary":
+
+(EN CONSTRUCCION)
 
 ---
 
@@ -1185,6 +1215,55 @@ Registrar un documento oficial con los pasos para solicitud de vacaciones, forma
 
 ### Pull Request 1:
 
+**Título:** 🏗️ [Setup] Configuración inicial del proyecto TG-TheGuardian
+
+**Descripción:**  
+Este PR implementa la configuración base de TG-TheGuardian estableciendo la infraestructura, estructura de archivos y conexiones fundamentales. Hemos seguido una arquitectura hexagonal para garantizar la escalabilidad y mantenibilidad del código, facilitando futuras integraciones.
+
+**Cambios Principales:**
+1. Creación del repositorio con estructura base siguiendo arquitectura hexagonal
+2. Configuración del entorno de desarrollo (TypeScript, ESLint, Prettier)
+3. Implementación de conexiones básicas con MongoDB, Redis y Slack
+4. Configuración de Docker y docker-compose para desarrollo y producción
+5. Implementación de sistema de logging y manejo de errores básicos
+
+**Características Técnicas:**
+- 📂 Estructura de carpetas optimizada para arquitectura hexagonal (domain, adapters, application)
+- ⚙️ Configuración completa de TypeScript con paths alias y opciones estrictas
+- 🐳 Docker y docker-compose para entorno de desarrollo reproducible
+- 🔌 Adaptadores básicos para Slack, MongoDB y Redis implementados
+- 🔒 Sistema de variables de entorno con validación (.env)
+- 📝 Logging estructurado para mejor depuración
+
+**Ejemplo de Uso:**
+```bash
+# Clonar el repositorio
+git clone https://github.com/NickoDante/AI4Devs-finalproject.git
+
+# Configurar variables de entorno
+cp .env.example .env
+
+# Iniciar con Docker
+docker-compose up -d
+
+# Desarrollo local
+npm run dev
+```
+
+**Tests Implementados:**
+- ✅ Healthchecks para verificar conexiones con servicios externos
+- ✅ Validación de variables de entorno
+- ✅ Tests básicos de adaptadores
+- ✅ Sistema de manejo de errores
+
+**Documentación:**
+- README completo con instrucciones de instalación y configuración
+- Documentación en código con JSDoc
+- Diagrama de arquitectura en formato Mermaid
+- Estructura de directorios documentada
+
+### Pull Request 2:
+
 **Título:** ✨ [Feature] Implementación del comando /tg-search para búsqueda en Confluence
 
 **Descripción:**  
@@ -1223,7 +1302,6 @@ Este PR implementa la funcionalidad principal de búsqueda del bot TG-TheGuardia
 - Actualización de README con ejemplos de uso
 - Documentación de tipos y interfaces
 
-### Pull Request 2:
-
 ### Pull Request 3:
 
+(EN CONSTRUCCION)

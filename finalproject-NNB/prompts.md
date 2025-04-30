@@ -278,7 +278,39 @@ Hagamoslo una ultima vez, para la historia "Como un desarrollador, quiero obtene
 ### 7. Pull Requests
 
 ---------------------------------------
-FUNCIONALIDAD 1: /tg-search
+#### Pull Request #1: Configuracion Base.
+---------------------------------------
+**Propmt 1:**
+Eres un Programador Fullstack experto en desarrollo de aplicaciones con bots en Slack, integracion de LLMs locales, y desarrollo de API de confluence. Vamos a desarrollar juntos el proyecto llamado "TG - TheGuardian". En el @TG-TheGuardian-README.md encontraras todo el contexto, arquitectura, contenido, MVP, tiempos, y caracteristicas funcionales que se quiere lograr con el producto. De momento quiero que lo leas y tengas el contexto del proyecto antes de que comencemos. 
+
+**Prompt 2:**
+Ahora quiero que leas especificamente la seccion de Organigrama en @TG-TheGuardian-README.md. Para que sepas lo que haremos el dia de Hoy, Lunes 22 de Abril. No ejecutes nada, solo entiende lo que haremos. 
+
+**Prompt 3:**
+Vamos a revisar el primer objetivo. El repositorio ya esta listo, y en este momento estamos en la raiz del proyecto. Nos faltaria revisar si hace falta algo mas en la estructura del proyecto. Revisa el proyecto actual por si hace falta algo primordial. Mantenlo sencillo y solo modificando lo que sea necesario para lograr el objetivo del MVP. 
+
+**Prompt 4:**
+Segun @readme.md tenemos una estructura de carpetas. Revisa tus sugerencias si hace sentido con esta estructura documentada para saber si es necesaria. 
+
+**Prompt 5:**
+Teniendo ahora en cuenta ese enfoque, de los objetivos que tenemos del dia 22 de Abril, cuales consideras ya estan completados y cuales hacen falta por completar ? 
+
+**Prompt 6:**
+Empecemos configurando el entorno de desarrollo. Hay una seccion en el @TG-TheGuardian-README.md llamada "Instalación del Proyecto desde Cero", que puede ayudar con el setup de los archivos json y .env. Usa esta seccion para generar y modificar lo que haga falta y completar ese objetivo. Recuerda mantener el foco, solamente en lo verdaderamente primordial e importante.
+
+**Prompt 7:**
+Ya pude correr "docker-compose up --build" sin problema. Eso en que punto nos deja con los objetivos diarios ? Que tenemos completo y que nos hace falta ? 
+
+**Prompt 8:**
+Revisemos los objetivos del dia Martes 23 de Abril. Segun lo que tebnemos actualmente en el proyecto, que esta completado y que esta pendiente ? Recuerda revisar la lista de objetivos del dia, no la tabla del organigrama.
+
+**Prompt 9:**
+Vamos entonces con el objetivo "Probar conexiones básicas end-to-end" de Slack. Cuentame, que necesitamos para esto ? Explicalo paso a paso, no ejecutes nada ni sugieras comandos. Solo explicame lo que vamos a hacer para que todo funcione. 
+
+**Prompt 10:**
+Funciono ! Eso me gusta mucho ! solo que fue usado con el comando "npm run dev" y estaba usandolo antes con "docker-compose up --build" que levantaba la app tambien. Ahora que la ejecuto, me sale este error. Se debe a que simplificamos o cual es la explicacion?  Podemos resolverlo para que el programa pueda correr alli tambien ? 
+---------------------------------------
+#### Pull Request #2: Configuracion Base.
 ---------------------------------------
 **Prompt 1:**
 Hoy vamos a trabajar en el Dia 1 de la Semana 3. Los objetivos principales seran:

@@ -121,10 +121,10 @@ Etapa 2
   de preguntas, tanto para consultas sobre proyectos como para temas
   administrativos, integrando el LLM para generar respuestas contextuales.
 * Objetivos:
-- ( ) Implementar comando /tg-question
-- ( ) Crear sistema de procesamiento de lenguaje natural
-- ( ) Implementar integración con LLM
-- ( ) Desarrollar sistema de contexto para respuestas
+- (✅) Implementar comando /tg-question
+- (✅) Crear sistema de procesamiento de lenguaje natural
+- (✅) Implementar integración con LLM
+- (✅) Desarrollar sistema de contexto para respuestas
 
 * Miércoles 7 de Mayo, 2025
 * Semana #3

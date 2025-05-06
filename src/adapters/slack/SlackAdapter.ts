@@ -31,6 +31,32 @@ export class SlackAdapter implements MessagePort {
   private aiAdapter: AIAdapter | null = null;
   private knowledgePort: KnowledgePort | null = null;
 
+  // Agregar estos mensajes de espera aleatorios al inicio de la clase SlackAdapter
+  private waitingMessages: Record<string, string[]> = {
+    es: [
+      "🔍 Todavía estoy investigando tu pregunta. Dame un momento más...",
+      "⏳ Estoy consultando diversas fuentes para darte la mejor respuesta posible.",
+      "🧠 Analizando información relevante para tu consulta. Casi listo...",
+      "📚 Revisando documentación para ofrecerte datos precisos. Un momento más...",
+      "👁️ Mis ojos están trabajando arduamente para encontrar la mejor respuesta para ti.",
+      "🔎 Recopilando información valiosa para responder tu pregunta de manera completa.",
+      "💭 Procesando tu consulta con atención. Gracias por tu paciencia.",
+      "📝 Elaborando una respuesta detallada y útil para ti. Casi terminamos...",
+      "🧩 Conectando diferentes piezas de información para responder correctamente."
+    ],
+    en: [
+      "🔍 Still researching your question. Give me a moment more...",
+      "⏳ Consulting various sources to give you the best possible answer.",
+      "🧠 Analyzing relevant information for your query. Almost ready...",
+      "📚 Reviewing documentation to offer you accurate data. One more moment...",
+      "👁️ My eyes are working hard to find the best answer for you.",
+      "🔎 Collecting valuable information to answer your question completely.",
+      "💭 Processing your query carefully. Thanks for your patience.",
+      "📝 Crafting a detailed and useful response for you. Almost done...",
+      "🧩 Connecting different pieces of information to answer correctly."
+    ]
+  };
+
   constructor(
     private readonly logger: Logger,
     private readonly cache: CachePort
@@ -241,20 +267,31 @@ export class SlackAdapter implements MessagePort {
     app.command('/tg-question', async ({ command, ack, respond }) => {
       await ack();
       this.logger.info('❓ Comando question recibido:', command);
+      
+      // Variable para controlar si debemos seguir enviando mensajes de espera
+      let processingComplete = false;
+      let waitingMessageInterval: NodeJS.Timeout | null = null;
+      let initialMessageTs: string | undefined;
+      
+      // Detectar el idioma de la pregunta
+      const language = this.detectLanguage(command.text);
+      
       try {
         // Validar el comando
         await this.validationMiddleware.validateCommand('/tg-question')({ body: command } as any, { json: respond } as any, async () => {
-          // Enviar mensaje de espera amistoso con The Guardian
+          // Enviar mensaje de espera amistoso con The Guardian y la pregunta incluida
           if (this.app) {
-            await this.app.client.chat.postMessage({
+            const initialResponse = await this.app.client.chat.postMessage({
               channel: command.channel_id,
-              text: "The Guardian está procesando tu pregunta...",
+              text: language === 'en' ? 
+                `The Guardian is processing your question "${command.text}"...` : 
+                `The Guardian está procesando tu pregunta "${command.text}"...`,
               blocks: [
                 {
                   type: "section",
                   text: {
                     type: "mrkdwn",
-                    text: "👁️👁️👁️ *The Guardian está procesando tu pregunta...*\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_"
+                    text: this.getIntroMessage(language, command.text)
                   }
                 },
                 {
@@ -262,39 +299,88 @@ export class SlackAdapter implements MessagePort {
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso."
+                      text: this.getTipMessage(language)
                     }
                   ]
                 }
               ],
               as_user: true
             });
-          } else {
-            await respond({
-              blocks: [
-                {
-                  type: "section",
-                  text: {
-                    type: "mrkdwn",
-                    text: "👁️👁️👁️ *The Guardian está procesando tu pregunta...*\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_"
-                  }
-                },
-                {
-                  type: "context",
-                  elements: [
-                    {
-                      type: "mrkdwn",
-                      text: "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso."
-                    }
-                  ]
-                }
-              ],
-              response_type: "ephemeral" // Mensaje efímero solo visible para el usuario
-            });
+            
+            initialMessageTs = initialResponse.ts as string;
+            
+            // Configurar mensajes de espera periódicos cada 15 segundos
+            waitingMessageInterval = setInterval(async () => {
+              if (!processingComplete) {
+                await this.sendWaitingMessage(command.channel_id, command.text, language, initialMessageTs);
+              } else if (waitingMessageInterval) {
+                clearInterval(waitingMessageInterval);
+              }
+            }, 15000); // 15 segundos
           }
 
           // Procesar la pregunta
-          const botResponse = await this.processCommand(command, '/tg-question');
+          let botResponse: BotResponse;
+          try {
+            botResponse = await this.processCommand(command, '/tg-question');
+            
+            // Verificar si la respuesta está en el mismo idioma que la pregunta
+            const responseLanguage = this.detectLanguage(botResponse.content);
+            const expectedLanguage = language;
+            
+            if (responseLanguage !== expectedLanguage) {
+              // Agregar una nota sobre el idioma
+              const originalContent = botResponse.content;
+              const noteText = language === 'en' ? 
+                `\n\n_Note: The Guardian works best with responses in the same language as your question._` : 
+                `\n\n_Nota: The Guardian funciona mejor con respuestas en el mismo idioma que tu pregunta._`;
+                
+              botResponse = {
+                ...botResponse,
+                content: `${this.getFriendlyIntro(language)}${originalContent}${noteText}`
+              };
+            } else {
+              // Añadir una introducción amigable en el idioma correspondiente
+              const originalContent = botResponse.content;
+              botResponse = {
+                ...botResponse,
+                content: `${this.getFriendlyIntro(language)}${originalContent}`
+              };
+            }
+            
+            // Asegurarse de que la fuente contenga el enlace si existe
+            if (botResponse.metadata && botResponse.metadata.sourceUrl) {
+              botResponse.metadata.source = `<${botResponse.metadata.sourceUrl}|${botResponse.metadata.source || 'Documento'}>`;
+            } else if (botResponse.metadata && botResponse.metadata.contextSources) {
+              const sources = Array.isArray(botResponse.metadata.contextSources) 
+                ? botResponse.metadata.contextSources 
+                : [botResponse.metadata.contextSources];
+              
+              if (sources.length > 0 && sources[0].url) {
+                botResponse.metadata.source = `<${sources[0].url}|${sources[0].title || 'Documento'}>`;
+              }
+            }
+          } catch (error) {
+            this.logger.error('Error procesando pregunta:', error);
+            botResponse = {
+              content: language === 'en' ?
+                '❌ *Error processing your question.* A problem occurred while searching for information. Please try again with another question or reformulate it.' :
+                '❌ *Error al procesar tu pregunta.* Ocurrió un problema mientras buscaba la información. Por favor, intenta nuevamente con otra pregunta o reformúlala.',
+              type: 'text',
+              metadata: {
+                source: 'Sistema',
+                confidence: 0,
+                hasError: true
+              }
+            };
+          }
+          
+          // Detener los mensajes de espera
+          processingComplete = true;
+          if (waitingMessageInterval) {
+            clearInterval(waitingMessageInterval);
+            waitingMessageInterval = null;
+          }
           
           // Enviar la respuesta final como un nuevo mensaje
           if (this.app) {
@@ -303,26 +389,36 @@ export class SlackAdapter implements MessagePort {
               channel: command.channel_id || '',
               text: botResponse.content,
               blocks: formattedResponse.blocks,
-              thread_ts: formattedResponse.thread_ts,
+              thread_ts: initialMessageTs, // Responder en el mismo hilo del mensaje inicial
               as_user: true
             });
           }
         });
       } catch (error) {
+        // Detener los mensajes de espera en caso de error
+        processingComplete = true;
+        if (waitingMessageInterval) {
+          clearInterval(waitingMessageInterval);
+          waitingMessageInterval = null;
+        }
+        
         this.logger.error('Error en comando question:', error);
         if (this.app) {
           await this.app.client.chat.postMessage({
             channel: command.channel_id,
-            text: "Error al procesar tu pregunta",
+            text: language === 'en' ? "Error processing your question" : "Error al procesar tu pregunta",
             blocks: [
               {
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
+                  text: language === 'en' ?
+                    "❌ *Error processing your question.* There was a problem communicating with Slack. Please try again or reformulate your question." :
+                    "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
                 }
               }
             ],
+            thread_ts: initialMessageTs,
             as_user: true
           });
         } else {
@@ -332,7 +428,9 @@ export class SlackAdapter implements MessagePort {
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
+                  text: language === 'en' ?
+                    "❌ *Error processing your question.* There was a problem communicating with Slack. Please try again or reformulate your question." :
+                    "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
                 }
               }
             ]
@@ -708,6 +806,93 @@ export class SlackAdapter implements MessagePort {
       console.error('❌ Error al reconectar:', error);
       // Esperar 5 segundos antes de intentar nuevamente
       setTimeout(() => this.handleReconnection(), 5000);
+    }
+  }
+
+  // Método para detectar el idioma de la pregunta
+  private detectLanguage(text: string): string {
+    // Detección simple basada en caracteres y palabras comunes
+    const spanishPattern = /([áéíóúüñ¿¡]|(\bde\b|\bla\b|\bel\b|\ben\b|\bcon\b|\bpor\b|\bpara\b|\bcomo\b|\bquien\b|\bcual\b|\bcuando\b|\bdonde\b))/i;
+    const englishPattern = /(\bthe\b|\bis\b|\bare\b|\bwas\b|\bwere\b|\bwill\b|\bcan\b|\bcould\b|\bshould\b|\bwould\b|\bhow\b|\bwhen\b|\bwhere\b|\bwhy\b|\bwhat\b)/i;
+    
+    if (spanishPattern.test(text)) return 'es';
+    if (englishPattern.test(text)) return 'en';
+    
+    // Por defecto, devolver español
+    return 'es';
+  }
+
+  // Método para obtener mensajes de introducción según el idioma
+  private getIntroMessage(language: string, question: string): string {
+    if (language === 'en') {
+      return `👁️👁️👁️ *The Guardian is processing your question:*\n\n> "${question}"\n\n_My multiple eyes are searching for the best answer for you. This process may take a few moments, especially if it's a complex question or requires consulting various sources of information. Please wait a moment!_`;
+    }
+    
+    // Español por defecto
+    return `👁️👁️👁️ *The Guardian está procesando tu pregunta:*\n\n> "${question}"\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_`;
+  }
+
+  // Método para obtener mensajes de consejo según el idioma
+  private getTipMessage(language: string): string {
+    if (language === 'en') {
+      return "💡 *Tip:* For faster questions, try to be specific and concise.";
+    }
+    
+    // Español por defecto
+    return "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso.";
+  }
+
+  // Método para obtener una introducción amigable para la respuesta según el idioma
+  private getFriendlyIntro(language: string): string {
+    if (language === 'en') {
+      return "*Hello! Here's the information I found for your question:*\n\n";
+    }
+    
+    // Español por defecto
+    return "*¡Hola! He encontrado esta información para tu pregunta:*\n\n";
+  }
+
+  // Método para manejar mensajes de espera
+  private async sendWaitingMessage(channelId: string, originalQuestion: string, language: string = 'es', messageTs?: string): Promise<string | undefined> {
+    try {
+      if (!this.app) return undefined;
+      
+      // Seleccionar un mensaje aleatorio del idioma correspondiente
+      const messages = this.waitingMessages[language] || this.waitingMessages.es;
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      
+      // Texto para la pregunta según el idioma
+      const questionText = language === 'en' ? "Question" : "Pregunta";
+      
+      const response = await this.app.client.chat.postMessage({
+        channel: channelId,
+        text: randomMessage,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `👁️👁️👁️ *${randomMessage}*`
+            }
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: `💬 ${questionText}: "${originalQuestion}"`
+              }
+            ]
+          }
+        ],
+        thread_ts: messageTs,
+        as_user: true
+      });
+      
+      return response.ts as string;
+    } catch (error) {
+      this.logger.error('Error enviando mensaje de espera:', error);
+      return undefined;
     }
   }
 } 

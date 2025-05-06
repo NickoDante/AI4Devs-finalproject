@@ -143,31 +143,31 @@ export class ProcessMessageUseCase {
     const limitedResults = sortedResults.slice(0, 4);
     
     const formattedResults = limitedResults.map(result => {
-      // Limpiar el contenido de tags HTML y caracteres especiales
-      const cleanContent = result.content
-        .replace(/<[^>]*>/g, '') // Remover tags HTML
-        .replace(/&[^;]+;/g, '') // Remover entidades HTML
-        .replace(/\s+/g, ' ') // Normalizar espacios
-        .trim();
+        // Limpiar el contenido de tags HTML y caracteres especiales
+        const cleanContent = result.content
+          .replace(/<[^>]*>/g, '') // Remover tags HTML
+          .replace(/&[^;]+;/g, '') // Remover entidades HTML
+          .replace(/\s+/g, ' ') // Normalizar espacios
+          .trim();
 
-      // Formatear el contenido para mostrar solo las primeras 200 caracteres
-      const contentPreview = cleanContent.length > 200 
-        ? cleanContent.substring(0, 200) + '...'
-        : cleanContent;
+        // Formatear el contenido para mostrar solo las primeras 200 caracteres
+        const contentPreview = cleanContent.length > 200 
+          ? cleanContent.substring(0, 200) + '...'
+          : cleanContent;
 
-      // Formatear las etiquetas o mostrar mensaje si no hay
+        // Formatear las etiquetas o mostrar mensaje si no hay
       const labels = result.metadata && result.metadata.labels && result.metadata.labels.length > 0
-        ? result.metadata.labels.join(', ')
-        : 'Sin etiquetas';
+          ? result.metadata.labels.join(', ')
+          : 'Sin etiquetas';
 
       // Obtener la URL del documento primero de metadata.url y luego de result.url
       const documentUrl = result.metadata?.url || result.url || '';
-      
-      return `📄 *${result.source}*\n` +
+
+        return `📄 *${result.source}*\n` +
              `🔗 <${documentUrl}|Ver documento>\n` +
-             `📝 ${contentPreview}\n` +
-             `🏷️ ${labels}`;
-    }).join('\n\n');
+               `📝 ${contentPreview}\n` +
+               `🏷️ ${labels}`;
+      }).join('\n\n');
 
     // Agregar mensaje cuando hay más resultados
     const moreResultsMessage = hasMoreResults 

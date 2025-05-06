@@ -212,58 +212,58 @@ export class ConfluenceAdapter implements KnowledgePort {
   private async createKnowledgeDocument(document: Document): Promise<string> {
     this.logger.info(`Creando documento en Confluence: ${document.title}`);
       
-    const response = await axios.post(
-      `${this.baseUrl}/rest/api/content`,
-      {
-        type: 'page',
+      const response = await axios.post(
+        `${this.baseUrl}/rest/api/content`,
+        {
+          type: 'page',
         title: document.title,
         space: { key: document.metadata?.spaceKey || this.spaceKey },
-        body: {
-          storage: {
+          body: {
+            storage: {
             value: document.content,
-            representation: 'storage'
+              representation: 'storage'
+            }
+          },
+          metadata: {
+          labels: document.tags?.map(tag => ({ name: tag })) || []
           }
         },
-        metadata: {
-          labels: document.tags?.map(tag => ({ name: tag })) || []
-        }
-      },
-      { auth: this.auth }
-    );
+        { auth: this.auth }
+      );
 
-    if (!response.data.id) {
-      throw new Error('Error al crear la página en Confluence');
-    }
+      if (!response.data.id) {
+        throw new Error('Error al crear la página en Confluence');
+      }
 
     this.logger.info(`Documento creado exitosamente en Confluence con ID: ${response.data.id}`);
     return response.data.id;
-  }
+      }
 
   private async updateKnowledgeDocument(document: Document): Promise<void> {
     this.logger.info(`Actualizando documento en Confluence: ${document.id}`);
-    
+      
     const currentVersion = await this.getCurrentVersion(document.id);
-    
-    await axios.put(
+      
+      await axios.put(
       `${this.baseUrl}/rest/api/content/${document.id}`,
-      {
-        version: {
-          number: currentVersion + 1
-        },
+        {
+          version: {
+            number: currentVersion + 1
+          },
         title: document.title,
-        type: 'page',
-        body: {
-          storage: {
+          type: 'page',
+          body: {
+            storage: {
             value: document.content,
-            representation: 'storage'
+              representation: 'storage'
+            }
+          },
+          metadata: {
+          labels: document.tags?.map(tag => ({ name: tag })) || []
           }
         },
-        metadata: {
-          labels: document.tags?.map(tag => ({ name: tag })) || []
-        }
-      },
-      { auth: this.auth }
-    );
+        { auth: this.auth }
+      );
 
     this.logger.info(`Documento actualizado exitosamente en Confluence: ${document.id}`);
   }

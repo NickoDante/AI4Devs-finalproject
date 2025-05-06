@@ -14,9 +14,70 @@ Esta guía detalla el proceso de despliegue de TG-TheGuardian en diferentes ento
   - Redis: 1GB RAM mínimo
 
 ### Software necesario
-- Docker y Docker Compose
-- Node.js 18.x (solo para despliegue sin Docker)
+- Docker y Docker Compose (para despliegue con contenedores)
+- Node.js 20.x o superior
 - Git
+- MongoDB (para desarrollo local)
+- Redis (para desarrollo local)
+- Modelo Llama (ver instrucciones de instalación)
+
+## Desarrollo Local
+
+### 1. Descargar el Modelo Llama
+
+```bash
+npm run download:llama
+```
+
+Este comando descargará el modelo Mistral 7B Instruct v0.2 (formato GGUF) necesario para el funcionamiento local de LlamaAdapter.
+
+### 2. Configuración del Entorno Local
+
+Puedes configurar automáticamente tu entorno local ejecutando:
+
+```bash
+npm run setup:local
+```
+
+Este script creará un archivo `.env.local` con la configuración necesaria para desarrollo local. El script copiará las credenciales de Slack y Confluence del archivo `.env` existente si está disponible.
+
+### 3. Iniciar el Entorno de Desarrollo
+
+#### En Windows:
+
+Tenemos dos opciones para iniciar el entorno local:
+
+**Opción 1**: Usando el script todo-en-uno:
+```bash
+npm run start:local
+```
+Este comando iniciará MongoDB, Redis y la aplicación de forma automática.
+
+**Opción 2**: Iniciando servicios manualmente:
+```bash
+# Iniciar MongoDB y Redis
+TG-Guardian_SlackBot_Test(Local-StartServices).bat
+
+# En otra terminal, iniciar la aplicación
+npm run dev:local
+```
+
+#### En Unix/Linux/Mac:
+
+```bash
+# Iniciar el entorno completo
+npm run start:local:unix
+```
+
+O manualmente:
+```bash
+# Iniciar MongoDB y Redis (instálalos previamente)
+mongod --dbpath ./data/db --port 27017
+redis-server --port 6380
+
+# En otra terminal, iniciar la aplicación
+npm run dev:local
+```
 
 ## Opciones de despliegue
 
@@ -245,7 +306,13 @@ Siga el mismo proceso, pero utilizando los archivos de configuración de producc
 2. **Error de conexión a Redis**:
    - Verificar que Redis esté ejecutándose
    - Verificar configuración del host y puerto
+   - Comprobar que se esté usando el puerto correcto (6380 en desarrollo local)
 
 3. **Problemas con Slack API**:
    - Validar tokens y permisos de la aplicación
    - Verificar endpoint de eventos y suscripciones 
+
+4. **Modelo Llama no disponible**:
+   - Verificar que se haya descargado el modelo con `npm run download:llama`
+   - Comprobar que el archivo del modelo exista en `./models/mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+   - Verificar que la ruta en el archivo de entorno sea correcta: `LLAMA_MODEL_PATH=./models/mistral-7b-instruct-v0.2.Q4_K_M.gguf` 

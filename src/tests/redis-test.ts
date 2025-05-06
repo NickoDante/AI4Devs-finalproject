@@ -5,7 +5,7 @@ import { ConversationContext } from '../domain/ports/CachePort';
 
 const logger = createLogger('redis-test');
 const redis = new Redis();
-const redisAdapter = new RedisAdapter(redis, logger);
+        const redisAdapter = new RedisAdapter(redis, logger);
 
 async function testRedis() {
   try {
@@ -30,11 +30,11 @@ async function testRedis() {
           timestamp: new Date()
         }
       ],
-      metadata: {
+            metadata: {
         lastInteraction: new Date(),
         topicId: 'general'
-      }
-    };
+            }
+        };
 
     // Guardar contexto
     await redisAdapter.saveConversationContext(context);
@@ -47,11 +47,11 @@ async function testRedis() {
     await redisAdapter.removeConversationContext(context.userId, context.conversationId);
     
     console.log('Redis test completed successfully!');
-  } catch (error) {
+    } catch (error) {
     console.error('Redis test failed:', error);
   } finally {
     redis.disconnect();
-  }
+    }
 }
 
 testRedis(); 

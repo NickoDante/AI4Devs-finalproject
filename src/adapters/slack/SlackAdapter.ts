@@ -7,9 +7,12 @@ import { Logger } from 'winston';
 import { CacheManager } from '../../infrastructure/cache/CacheManager';
 import { CachePort } from '../../domain/ports/CachePort';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
+import { ProcessQuestionUseCase } from '../../application/use-cases/message/ProcessQuestionUseCase';
 import { container } from '../../infrastructure/di';
 import { Query } from '../../domain/models/Query';
 import { createHash } from 'crypto';
+import { AIAdapter } from '../../domain/ports/AIAdapter';
+import { KnowledgePort } from '../../domain/ports/KnowledgePort';
 
 interface SlackMessageEvent {
   user?: string;
@@ -24,6 +27,9 @@ export class SlackAdapter implements MessagePort {
   private validationMiddleware: ValidationMiddleware;
   private cacheManager: CacheManager;
   private processMessageUseCase: ProcessMessageUseCase | null = null;
+  private processQuestionUseCase: ProcessQuestionUseCase | null = null;
+  private aiAdapter: AIAdapter | null = null;
+  private knowledgePort: KnowledgePort | null = null;
 
   constructor(
     private readonly logger: Logger,
@@ -41,6 +47,41 @@ export class SlackAdapter implements MessagePort {
       }
     }
     return this.processMessageUseCase;
+  }
+
+  private getProcessQuestionUseCase(): ProcessQuestionUseCase {
+    if (!this.processQuestionUseCase) {
+      // Si no está disponible en el contenedor, lo creamos aquí
+      const aiAdapter = this.getAIAdapter();
+      const knowledgePort = this.getKnowledgePort();
+      this.processQuestionUseCase = new ProcessQuestionUseCase(
+        aiAdapter,
+        knowledgePort,
+        this.cache,
+        this.logger
+      );
+    }
+    return this.processQuestionUseCase;
+  }
+
+  private getAIAdapter(): AIAdapter {
+    if (!this.aiAdapter) {
+      this.aiAdapter = container.getAIAdapter();
+      if (!this.aiAdapter) {
+        throw new Error('AIAdapter no está inicializado en el contenedor');
+      }
+    }
+    return this.aiAdapter;
+  }
+
+  private getKnowledgePort(): KnowledgePort {
+    if (!this.knowledgePort) {
+      this.knowledgePort = container.getKnowledgeAdapter();
+      if (!this.knowledgePort) {
+        throw new Error('KnowledgePort no está inicializado en el contenedor');
+      }
+    }
+    return this.knowledgePort;
   }
 
   private assertAppInitialized(): void {
@@ -182,8 +223,40 @@ export class SlackAdapter implements MessagePort {
       try {
         // Validar el comando
         await this.validationMiddleware.validateCommand('/tg-question')({ body: command } as any, { json: respond } as any, async () => {
+          // Enviar mensaje de espera amistoso con The Guardian
+          await respond({
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: "👁️👁️👁️ *The Guardian está procesando tu pregunta...*\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_"
+                }
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso."
+                  }
+                ]
+              }
+            ],
+            response_type: "ephemeral" // Mensaje efímero solo visible para el usuario
+          });
+
+          // Procesar la pregunta
           const botResponse = await this.processCommand(command, '/tg-question');
-          await respond(this.formatResponse(botResponse));
+          
+          // Enviar la respuesta final como un nuevo mensaje
+          if (this.app) {
+            await this.app.client.chat.postMessage({
+              channel: command.channel_id || '',
+              text: botResponse.content,
+              blocks: this.formatResponse(botResponse).blocks
+            });
+          }
         });
       } catch (error) {
         this.logger.error('Error en comando question:', error);
@@ -271,31 +344,56 @@ export class SlackAdapter implements MessagePort {
           break;
 
         case '/tg-question':
-          // Preparar la consulta para el procesamiento natural
-          const query: Query = {
-            id: crypto.randomUUID(),
-            queryHash: createHash('sha256').update(message.content).digest('hex'),
-            originalText: message.content,
-            normalizedText: message.content.toLowerCase().trim(),
-            language: 'es', // Por ahora hardcoded, luego detectar
-            type: 'question',
-            command: '/tg-question',
-            status: 'pending',
-            userId: message.userId,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-
-          // Respuesta temporal mientras se procesa
+          // Usar el nuevo caso de uso para procesar preguntas
+          try {
+            this.logger.info('Procesando pregunta con sistema de contexto:', message.content);
+            
+            // Preparar la consulta para tracking y auditoría
+            const query: Query = {
+              id: crypto.randomUUID(),
+              queryHash: createHash('sha256').update(message.content).digest('hex'),
+              originalText: message.content,
+              normalizedText: message.content.toLowerCase().trim(),
+              language: 'es',
+              type: 'question',
+              command: '/tg-question',
+              status: 'pending',
+              userId: message.userId,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            };
+            
+            // Procesar la pregunta usando el sistema de contexto
+            const questionUseCase = this.getProcessQuestionUseCase();
+            const questionResponse = await questionUseCase.execute(message);
+            
+            // Actualizar el estado de la consulta
+            query.status = 'completed';
+            query.updatedAt = new Date();
+            
+            // Construir respuesta enriquecida
+            response = {
+              content: `*Respuesta:*\n${questionResponse.content}`,
+              type: 'text',
+              threadId: message.threadId,
+              metadata: {
+                ...questionResponse.metadata,
+                query: query
+              }
+            };
+          } catch (error) {
+            this.logger.error('Error procesando pregunta:', error);
           response = {
-            content: `🤔 *Analizando tu consulta:*\n"${message.content}"\n\n_Procesando..._`,
+              content: `❌ *Error al procesar tu pregunta*\nLo siento, tuve un problema al procesar tu consulta. Por favor, inténtalo de nuevo con otra pregunta.`,
             type: 'text',
             metadata: {
               source: 'Sistema de preguntas y respuestas',
-              confidence: 0.90,
-              query: query
+                confidence: 0.0,
+                error: true,
+                message: String(error)
             }
           };
+          }
           break;
 
         case '/tg-summary':

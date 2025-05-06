@@ -1,0 +1,54 @@
+# Dependencias
+node_modules
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Archivos de entorno (serán copiados manualmente)
+.env*
+!.env.example
+
+# Archivos de desarrollo
+.git
+.github
+.vscode
+.idea
+.cursor
+.editorconfig
+.eslintrc
+.prettierrc
+*.test.ts
+*.spec.ts
+test
+tests
+coverage
+
+# Archivos temporales
+tmp
+temp
+.tmp
+.temp
+
+# Archivos de compilación
+dist
+build
+
+# Datos locales (usará volúmenes)
+data
+
+# Excluir los modelos grandes, excepto los necesarios
+models/*
+!models/README.md
+!models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
+!models/llama-model.gguf
+
+# Archivos Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml 

@@ -1,5 +1,5 @@
 import { MongoDBAdapter } from '../../adapters/persistence/MongoDBAdapter';
-import { OpenAIAdapter } from '../../adapters/llm/OpenAIAdapter';
+import { LlamaAdapter } from '../../adapters/llm/LlamaAdapter';
 import { SlackAdapter } from '../../adapters/slack/SlackAdapter';
 import { RedisAdapter } from '../../adapters/cache/RedisAdapter';
 import { ConfluenceAdapter } from '../../adapters/confluence/ConfluenceAdapter';
@@ -63,7 +63,7 @@ export class DependencyContainer {
     async initialize(config: {
         mongoUri?: string;
         redisConfig?: RedisConfig;
-        openAiKey?: string;
+        llamaModelPath?: string;
         slackPort?: number;
     } = {}): Promise<void> {
         try {
@@ -77,7 +77,7 @@ export class DependencyContainer {
 
             // Inicializar adaptadores
             this.services.persistence = new MongoDBAdapter(config.mongoUri || 'mongodb://localhost:27017/theguardian', this.services.logger);
-            this.services.ai = new OpenAIAdapter(config.openAiKey);
+            this.services.ai = new LlamaAdapter();
             this.services.messaging = new SlackAdapter(this.services.logger, this.services.cache);
             this.services.knowledge = new ConfluenceAdapter(this.services.logger);
 

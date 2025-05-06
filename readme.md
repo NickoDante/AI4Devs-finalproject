@@ -1304,4 +1304,47 @@ Este PR implementa la funcionalidad principal de búsqueda del bot TG-TheGuardia
 
 ### Pull Request 3:
 
-(EN CONSTRUCCION)
+**Título:** 🔍 [Feature] Implementación del comando /tg-question para respuestas inteligentes bilingües
+
+**Descripción:**  
+Este PR implementa la funcionalidad del comando `/tg-question`, permitiendo a los usuarios de Teravision Games realizar consultas en lenguaje natural directamente al bot. La implementación incluye soporte bilingüe (español e inglés) con detección automática del idioma, mejorando significativamente la experiencia de usuario y el acceso a información administrativa y técnica.
+
+**Cambios Principales:**
+1. Implementación completa del adaptador para Llama (LlamaAdapter) con capacidad bilingüe
+2. Integración del comando `/tg-question` en SlackAdapter con mensajes de espera mejorados
+3. Sistema de detección automática de idioma para procesar y responder en el mismo idioma del usuario
+4. Manejo de contexto conversacional para preguntas de seguimiento
+5. Implementación de fallbacks inteligentes cuando no se dispone del modelo Llama local
+
+**Características Técnicas:**
+- 🌐 Detección automática del idioma (español/inglés) en las consultas
+- ⏳ Mensaje de espera amigable mientras se procesa la respuesta
+- 🧠 Integración con modelo local Llama para respuestas rápidas y privadas
+- 🔄 Conservación de contexto para preguntas encadenadas
+- 📊 Métricas de rendimiento y confianza para cada respuesta
+- 🛡️ Manejo gracioso de errores en la carga del modelo o procesamiento
+
+**Ejemplo de Uso:**
+```
+# Pregunta en español
+/tg-question ¿Cuál es el proceso para solicitar equipo nuevo?
+
+# Pregunta en inglés
+/tg-question What is the current sprint schedule?
+
+# Pregunta de seguimiento (mantiene contexto)
+/tg-question ¿Y quién es el responsable de aprobarlo?
+```
+
+**Tests Implementados:**
+- ✅ Tests unitarios completos para LlamaAdapter y su integración con SlackAdapter
+- ✅ Pruebas de detección de idioma con diversos tipos de preguntas
+- ✅ Validación de mensajes de espera y respuestas finales
+- ✅ Simulación de errores y verificación de fallbacks
+- ✅ Tests de mantenimiento de contexto conversacional
+
+**Documentación:**
+- Se incluye documentación detallada en comentarios de código 
+- Actualización de prompts para optimizar respuestas del LLM
+- Guía de utilización en documentación principal
+- Ejemplos de preguntas efectivas para usuarios finales

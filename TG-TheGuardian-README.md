@@ -621,8 +621,7 @@ La implementación considera:
 - Control de costos mediante cache de resúmenes frecuentes
 - Mecanismos de limitación de tamaño para documentos extensos
 
-```
-%%{init: {'theme': 'neutral'}}%%
+```%{init: {'theme': 'neutral'}}%%
 flowchart TD
     %% Usuarios y servicios externos
     UserSlack([Usuario de Teravision\nen Slack])
@@ -2015,6 +2014,7 @@ Sigue estos pasos para tener el proyecto funcionando:
 - npm 7 o superior
 - Docker y Docker Compose (opcional, para instalación con Docker)
 - Git
+- Espacio en disco para el modelo Llama (~4GB)
 
 #### Instalación Local
 
@@ -2030,10 +2030,20 @@ Sigue estos pasos para tener el proyecto funcionando:
    ```
    Edita este archivo con tus credenciales.
 
-3. Instala las dependencias:
+3. Instala las dependencias y el modelo Llama:
    ```bash
+   # Instalación completa (dependencias + modelo Llama)
+   npm run setup
+
+   # O instalar primero las dependencias y luego el modelo
    npm install
+   npm run download:llama
+
+   # Probar que el modelo funciona correctamente
+   npm run test:llama
    ```
+
+   El script de descarga te preguntará si deseas descargar el modelo recomendado (~4GB) y configurará automáticamente la variable LLAMA_MODEL_PATH en tu archivo .env.local.
 
 4. Inicia la aplicación en modo desarrollo:
    ```bash
@@ -2056,12 +2066,17 @@ Sigue estos pasos para tener el proyecto funcionando:
    ```
    Edita este archivo con tus credenciales.
 
-3. Construye y ejecuta con Docker Compose:
+3. Descarga el modelo Llama (necesario incluso para Docker):
+   ```bash
+   npm run download:llama
+   ```
+
+4. Construye y ejecuta con Docker Compose:
    ```bash
    docker-compose up --build
    ```
 
-4. La aplicación estará disponible en `http://localhost:3001`.
+5. La aplicación estará disponible en `http://localhost:3001`.
 
 #### Verificación de la Instalación
 
@@ -2077,6 +2092,11 @@ Para comprobar que todo está funcionando correctamente:
    ```
 
 2. Deberías ver un mensaje de estado indicando que todos los componentes están operativos.
+
+3. Verifica que Llama funcione correctamente:
+   ```bash
+   npm run test:llama
+   ```
 
 #### Ejecución de Pruebas
 
@@ -2097,6 +2117,9 @@ npm run test:redis
 
 # Pruebas específicas de Slack
 npm run test:slack
+
+# Pruebas del modelo Llama
+npm run test:llama
 ```
 
 #### Solución de Problemas Comunes
@@ -2107,7 +2130,15 @@ npm run test:slack
 
 - **Problemas con Docker**: Intenta reiniciar los contenedores con `docker-compose down` seguido de `docker-compose up --build`.
 
-- **Errores en la API de OpenAI**: Verifica que la clave API sea válida y que tenga saldo disponible.
+- **Problemas con el modelo Llama**: Si el modelo no se carga correctamente:
+  ```bash
+  # Verificar la instalación del modelo
+  npm run download:llama
+  
+  # Probar el modelo
+  npm run test:llama
+  ```
+  Asegúrate de que LLAMA_MODEL_PATH en .env.local apunta a la ubicación correcta del modelo.
 
 ## Proceso de Despliegue
 
@@ -2263,6 +2294,9 @@ En caso de necesitar un despliegue manual, seguir estos pasos:
    ```bash
    # Instalar dependencias
    npm ci
+   
+   # Descargar e instalar modelo Llama (si no existe)
+   npm run download:llama
    
    # Construir el proyecto
    npm run build

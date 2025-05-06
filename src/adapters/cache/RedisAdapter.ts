@@ -214,9 +214,9 @@ export class RedisAdapter implements CachePort {
         try {
             const key = `${context.userId}:${context.conversationId}`;
             await this.set(key, context, {
-                namespace: this.contextNamespace,
-                ttl: 1800 // 30 minutos
-            });
+            namespace: this.contextNamespace,
+            ttl: 1800 // 30 minutos
+        });
 
             // Actualizar la lista de conversaciones activas
             await this.addToActiveConversations(context.userId, context.conversationId);

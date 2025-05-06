@@ -13,7 +13,7 @@ Esta guía proporciona instrucciones detalladas para instalar y configurar TG-Th
 
 ### Credenciales necesarias
 - **Slack API**: Bot Token, Signing Secret y App Token
-- **OpenAI API**: Clave para acceso a los modelos de IA (opcional)
+- **Llama**: Modelo local LLM (opcional, se puede instalar automáticamente)
 - **Confluence API**: Credenciales para acceso a la documentación (opcional)
 
 ## Instalación en entorno local
@@ -35,15 +35,30 @@ Edita el archivo `.env.local` con tus credenciales y configuración:
 - Configuración de MongoDB: `MONGODB_URI`
 - Configuración de Redis: `REDIS_HOST`, `REDIS_PORT`
 - Credenciales de Slack: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN`
-- Credenciales de OpenAI (opcional): `OPENAI_API_KEY`, `OPENAI_MODEL`
+- Configuración de Llama (opcional): `LLAMA_MODEL_PATH`, `LLAMA_GPU_LAYERS`
 - Configuración de Confluence (opcional): `CONFLUENCE_HOST`, `CONFLUENCE_USERNAME`, etc.
 
-### 3. Instalar dependencias
+### 3. Instalar dependencias y configurar Llama
 ```bash
+# Instalar dependencias y descargar automáticamente el modelo Llama
+npm run setup
+
+# O para instalar solo las dependencias sin el modelo
 npm install
 ```
 
-### 4. Iniciar servicios locales (MongoDB y Redis)
+### 4. Instalar modelo Llama (si no lo instalaste con setup)
+```bash
+# Descargar e instalar modelo Llama automáticamente
+npm run download:llama
+
+# Probar que el modelo funciona correctamente
+npm run test:llama
+```
+
+El script de descarga le preguntará si desea descargar el modelo recomendado (aproximadamente 4GB). Si elige descargarlo, se configurará automáticamente en el archivo `.env.local`.
+
+### 5. Iniciar servicios locales (MongoDB y Redis)
 
 #### Opción 1: Usando script de utilidad (Windows)
 ```
@@ -54,7 +69,7 @@ TG-Guardian_SlackBot_Test(Local-StartServices).bat
 - Iniciar MongoDB en puerto 27017
 - Iniciar Redis en puerto 6379
 
-### 5. Ejecutar la aplicación en modo desarrollo
+### 6. Ejecutar la aplicación en modo desarrollo
 ```bash
 npm run dev:local
 ```
@@ -112,6 +127,9 @@ npm run test:slack
 
 # Generar informe de cobertura
 npm run test:coverage
+
+# Probar modelo Llama
+npm run test:llama
 ```
 
 ## Solución de problemas comunes
@@ -127,6 +145,19 @@ Si no puedes conectar a Redis, verifica:
 - Que el servicio esté corriendo en el puerto configurado
 - Las credenciales y la configuración de conexión
 
+### Problemas con modelo Llama
+Si encuentras errores al cargar el modelo Llama:
+- Asegúrate de que el modelo se haya descargado correctamente:
+  ```bash
+  npm run download:llama
+  ```
+- Verifica que la ruta en `LLAMA_MODEL_PATH` sea correcta
+- Si tienes GPU, configura `LLAMA_GPU_LAYERS` con un valor apropiado
+- Para diagnóstico del modelo:
+  ```bash
+  npm run test:llama
+  ```
+
 ### Errores con Slack API
 - Verifica que las credenciales sean correctas
 - Asegúrate de que la app de Slack tenga los permisos necesarios
@@ -136,4 +167,5 @@ Si no puedes conectar a Redis, verifica:
 - [Documentación de la API de Slack](https://api.slack.com/docs)
 - [Documentación de MongoDB](https://docs.mongodb.com/)
 - [Documentación de Redis](https://redis.io/docs)
-- [Documentación de OpenAI API](https://platform.openai.com/docs/) 
+- [Documentación de Llama-cpp](https://github.com/ggerganov/llama.cpp)
+- [Modelos Llama en Hugging Face](https://huggingface.co/TheBloke) 

@@ -309,8 +309,9 @@ Vamos entonces con el objetivo "Probar conexiones básicas end-to-end" de Slack.
 
 **Prompt 10:**
 Funciono ! Eso me gusta mucho ! solo que fue usado con el comando "npm run dev" y estaba usandolo antes con "docker-compose up --build" que levantaba la app tambien. Ahora que la ejecuto, me sale este error. Se debe a que simplificamos o cual es la explicacion?  Podemos resolverlo para que el programa pueda correr alli tambien ? 
+
 ---------------------------------------
-#### Pull Request #2: Configuracion Base.
+#### Pull Request #2: Comando /tg-search
 ---------------------------------------
 **Prompt 1:**
 Hoy vamos a trabajar en el Dia 1 de la Semana 3. Los objetivos principales seran:
@@ -358,3 +359,56 @@ Procedamos con el 3er Ticket: Desarrollar el sistema de extracción de palabras 
 
 **Prompt 7:**
 Vamos ahora con el ticket 4: Implementar el adaptador de conexión con la API de Confluence. Este por ser la integracion de una nueva API, me gustaria que tuviesemos cuidado y me indiques paso a paso donde debo intervenir para la configuracion del API. Hasta el momento, recuerdo que ya teniamos algunos archivos de test y adaptadores para Confluence como @ConfluenceAdapter.ts @ConfluenceDocument.ts , asi que revisa antes de implementar logica nueva. 
+
+---------------------------------------
+#### Pull Request #3: Comando /tg-question
+---------------------------------------
+**Prompt 1:**
+Vamos a implementar la funcionalidad del comando "/tg-question". Para ello, tenemos 4 objetivos principales: 
+* Implementar el comando /tg-question
+* Crear sistema de procesamiento de lenguaje natural
+* Implementar integración con LLM
+* Desarrollar sistema de contexto para respuestas
+
+Quiero que respondas a las siguientes preguntas antes de empezar a ejecutar: 
+1. Cual es el LLM que usaremos y consideres mejor para el servisio, teniendo en cuenta lo que se busca con el proyecto? Hazme una lista de 3 posibles candidatos, con ventajas y desventajas, dificultad de implementacion, y valor al proyecto. Concluye entre las 3 la mas acertada.
+2. Como manejaremos el tema de conversaciones por lenguaje natural ? El LLM sera capaz de leer los archivos de confluence para responder? (eso estaria genial). Quiero entender como lo definiremos para este MVP, y con ello, saber el alcance que tendra. 
+3. Como mantendremos la seguridad de la informacion del LLM ? Me interesa que sea un LLM local. Encuentras mas info de seguridad en el @readme.md de ser necesario.
+4. Teniendo todos los anteriores puntos listos, como vas a hacer la funcionalidad ? Describeme el paso a paso del desarrollo del feature para entender (es la primera vez que hago un producto asi), y que cumpla con los objetivos principales.
+
+**Prompt 2:**
+Con esto establecido, iremos paso por paso, dentro de los 7 pasos del plan de desarrollo, comenzando con el Paso 1: Configuracion Base. 
+
+Recuerda que actualmente ya tenemos conexiones funcionando a Slack y a Confluence gracias al comando "/tg-search" que tenemos funcionando para buscar documentos en confluence desde Slack (mas info en @TG-SEARCH-FLOW.md ). 
+
+A partir de este proceso, quiero que siempre revises el codigo existente y solo crees archivos si lo ves estrictamente necesario. 
+
+**Prompt 3:**
+Vamos con el Paso 2: Implementacion del comando en Slack. Para esto, considera que el comando ya existe tanto en el API de Slack (en la pagina web) configurado, como en el proyecto, ya que responde al comando "/tg-question" devolviendo una respuesta generica. Incluso devuelve un mensaje si el input no termina en caracter "?". Esto ultimo me gustaria removerlo porque limita las consultas en lenguaje natural.
+
+Ejecuta el paso y dejalo listo para que luego continuemos con el Paso 3: Sistema de procesamiento natural.
+
+**Prompt 4:**
+Ya tenemos funcionando el comando "/tg-question", y con los ajustes requeridos para que nos envie una respuesta estatica en Slack. Retomando nuestros siguientes pasos del plan de desarrollo:
+
+Paso 3: Sistema de procesamiento natural
+Paso 4: Integración con LLM
+
+Recuerda que para esto, estamos considerando Llama como el LLM escogido, debe vivir de manera local, y que ya tenemos un adaptador para el LLM llamado @OpenAIAdapter.ts . Para ello, considera: 
+
+* Instalemos la version mas actualizada de Llama que se adapte a nuestro proyecto
+* Recuerda los parametros de seguridad del @readme.md , para tener en cuenta a la hora de implementar el LLM en nuestro proyecto. 
+* Cambiemos el nombre del adaptador de "OpenAIAdapter" a "LlamaAdapter" y con ello, revisemos que todas las referencias a ese archivo sean reemplazadas para su buena fucionalidad.
+* Generemos una prueba cuando se ejecute el comando "/tg-question", para validar que el LLM fue integrado correctamente en el proyecto.
+
+**Prompt 5:**
+Quiero que ahora revisemos el Paso 5: Sistema de contexto, y luego de finalizado, revisemos el flujo completo que me sugeriste asi: 
+
+1. Usuario envía /tg-question ¿Cómo funciona el sistema de combate?
+2. NLP procesa la pregunta y extrae intención
+3. Sistema busca documentos relevantes en VectorDB
+4. LLM genera respuesta basada en documentos encontrados
+5. Se guarda contexto en Redis
+6. Se envía respuesta formateada al usuario
+
+Recuerda que antes de cualquier implementacion, revisa muy bien la estructura del proyecto por si hay archivos ya creados y que no tengamos duplicados. Mantenlo sencillo y claro para cumplir el objetivo del MVP y con ello, los objetivos del 06 de Mayo segun@TG-TheGuardian-Organigrama.md .

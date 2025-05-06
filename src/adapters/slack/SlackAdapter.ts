@@ -115,7 +115,8 @@ export class SlackAdapter implements MessagePort {
           type: 'direct_message'
         });
 
-        await say(this.formatResponse(botResponse));
+        const formattedResponse = this.formatResponse(botResponse);
+        await say(formattedResponse);
       } catch (error) {
         console.error('Error processing direct message:', error);
         await say({
@@ -159,7 +160,8 @@ export class SlackAdapter implements MessagePort {
         }
         botResponse.metadata.messageType = 'mention';
 
-        await say(this.formatResponse(botResponse));
+        const formattedResponse = this.formatResponse(botResponse);
+        await say(formattedResponse);
       } catch (error) {
         console.error('Error processing mention:', error);
         await say({
@@ -204,7 +206,20 @@ export class SlackAdapter implements MessagePort {
             metadata: botResponse.metadata
           });
 
-          await respond(this.formatResponse(botResponse));
+          const formattedResponse = this.formatResponse(botResponse);
+          
+          // En lugar de usar el método respond, usamos chat.postMessage para más control
+          if (this.app) {
+            await this.app.client.chat.postMessage({
+              channel: command.channel_id,
+              text: botResponse.content,
+              blocks: formattedResponse.blocks,
+              thread_ts: formattedResponse.thread_ts,
+              as_user: true // Asegura que se muestre como el bot con su avatar y nombre
+            });
+          } else {
+            await respond(formattedResponse);
+          }
         });
       } catch (error) {
         this.logger.error('Error en comando search:', error);
@@ -230,53 +245,99 @@ export class SlackAdapter implements MessagePort {
         // Validar el comando
         await this.validationMiddleware.validateCommand('/tg-question')({ body: command } as any, { json: respond } as any, async () => {
           // Enviar mensaje de espera amistoso con The Guardian
-          await respond({
-            blocks: [
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: "👁️👁️👁️ *The Guardian está procesando tu pregunta...*\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_"
-                }
-              },
-              {
-                type: "context",
-                elements: [
-                  {
+          if (this.app) {
+            await this.app.client.chat.postMessage({
+              channel: command.channel_id,
+              text: "The Guardian está procesando tu pregunta...",
+              blocks: [
+                {
+                  type: "section",
+                  text: {
                     type: "mrkdwn",
-                    text: "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso."
+                    text: "👁️👁️👁️ *The Guardian está procesando tu pregunta...*\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_"
                   }
-                ]
-              }
-            ],
-            response_type: "ephemeral" // Mensaje efímero solo visible para el usuario
-          });
+                },
+                {
+                  type: "context",
+                  elements: [
+                    {
+                      type: "mrkdwn",
+                      text: "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso."
+                    }
+                  ]
+                }
+              ],
+              as_user: true
+            });
+          } else {
+            await respond({
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "👁️👁️👁️ *The Guardian está procesando tu pregunta...*\n\n_Mis múltiples ojos están buscando la mejor respuesta para ti. Este proceso puede tomar unos momentos, especialmente si es una pregunta compleja o requiere consultar varias fuentes de información. ¡Por favor espera un momento!_"
+                  }
+                },
+                {
+                  type: "context",
+                  elements: [
+                    {
+                      type: "mrkdwn",
+                      text: "💡 *Tip:* Para preguntas más rápidas, intenta ser específico y conciso."
+                    }
+                  ]
+                }
+              ],
+              response_type: "ephemeral" // Mensaje efímero solo visible para el usuario
+            });
+          }
 
           // Procesar la pregunta
           const botResponse = await this.processCommand(command, '/tg-question');
           
           // Enviar la respuesta final como un nuevo mensaje
           if (this.app) {
+            const formattedResponse = this.formatResponse(botResponse);
             await this.app.client.chat.postMessage({
               channel: command.channel_id || '',
               text: botResponse.content,
-              blocks: this.formatResponse(botResponse).blocks
+              blocks: formattedResponse.blocks,
+              thread_ts: formattedResponse.thread_ts,
+              as_user: true
             });
           }
         });
       } catch (error) {
         this.logger.error('Error en comando question:', error);
-        await respond({
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
+        if (this.app) {
+          await this.app.client.chat.postMessage({
+            channel: command.channel_id,
+            text: "Error al procesar tu pregunta",
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
+                }
               }
-            }
-          ]
-        });
+            ],
+            as_user: true
+          });
+        } else {
+          await respond({
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: "❌ *Error al procesar tu pregunta.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o reformula tu pregunta."
+                }
+              }
+            ]
+          });
+        }
       }
     });
 
@@ -288,21 +349,51 @@ export class SlackAdapter implements MessagePort {
         // Validar el comando
         await this.validationMiddleware.validateCommand('/tg-summary')({ body: command } as any, { json: respond } as any, async () => {
           const botResponse = await this.processCommand(command, '/tg-summary');
-          await respond(this.formatResponse(botResponse));
+          const formattedResponse = this.formatResponse(botResponse);
+          
+          // En lugar de usar el método respond, usamos chat.postMessage para más control
+          if (this.app) {
+            await this.app.client.chat.postMessage({
+              channel: command.channel_id,
+              text: botResponse.content,
+              blocks: formattedResponse.blocks,
+              thread_ts: formattedResponse.thread_ts,
+              as_user: true // Asegura que se muestre como el bot con su avatar y nombre
+            });
+          } else {
+            await respond(formattedResponse);
+          }
         });
       } catch (error) {
         this.logger.error('Error en comando summary:', error);
-        await respond({
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: "❌ *Error al generar el resumen.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con un enlace diferente."
+        if (this.app) {
+          await this.app.client.chat.postMessage({
+            channel: command.channel_id,
+            text: "Error al generar el resumen",
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: "❌ *Error al generar el resumen.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con un enlace diferente."
+                }
               }
-            }
-          ]
-        });
+            ],
+            as_user: true
+          });
+        } else {
+          await respond({
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: "❌ *Error al generar el resumen.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con un enlace diferente."
+                }
+              }
+            ]
+          });
+        }
       }
     });
   }
@@ -454,9 +545,14 @@ export class SlackAdapter implements MessagePort {
 
     // Verificar si la respuesta proviene de una mención del bot (mention)
     const isMention = response.metadata?.messageType === 'mention';
+    
+    // Verificar si hay metadatos y si debe mostrar información adicional
+    const hasMetadata = response.metadata !== undefined && Object.keys(response.metadata || {}).length > 0;
+    const hasSearchResults = hasMetadata && response.metadata?.confidence !== undefined && response.metadata?.confidence > 0;
+    const hasEmptyResults = hasMetadata && response.metadata?.emptyResults === true;
 
-    // Agregar fuente si existe y no es una mención
-    if (response.metadata?.source && !isMention) {
+    // Solo mostrar fuente y confianza cuando hay resultados reales (no vacíos)
+    if (hasMetadata && !hasEmptyResults && response.metadata?.source && !isMention && hasSearchResults) {
       blocks.push({
         type: 'context',
         elements: [{
@@ -466,8 +562,8 @@ export class SlackAdapter implements MessagePort {
       });
     }
 
-    // Agregar nivel de confianza si existe y no es una mención
-    if (response.metadata?.confidence && !isMention) {
+    // Solo mostrar confianza cuando hay resultados reales (no vacíos)
+    if (hasMetadata && !hasEmptyResults && response.metadata?.confidence !== undefined && !isMention && hasSearchResults) {
       blocks.push({
         type: 'context',
         elements: [{
@@ -477,10 +573,25 @@ export class SlackAdapter implements MessagePort {
       });
     }
 
-    return {
+    // Cuando no hay resultados, agregar un bloque adicional para mantener consistencia en formato
+    if (hasEmptyResults) {
+      blocks.push({
+        type: 'context',
+        elements: [{
+          type: 'mrkdwn',
+          text: `ℹ️ _Prueba con otros términos de búsqueda para encontrar lo que necesitas._`
+        }]
+      });
+    }
+
+    // Configuración para enviar a Slack
+    const responseConfig: any = {
       blocks,
-      thread_ts: response.threadId
+      thread_ts: response.threadId,
+      text: response.content // Texto alternativo para notificaciones
     };
+
+    return responseConfig;
   }
 
   async processMessage(message: Message): Promise<BotResponse> {
@@ -532,7 +643,8 @@ export class SlackAdapter implements MessagePort {
     try {
       await this.app!.client.chat.postMessage({
         channel,
-        text
+        text,
+        as_user: true
       });
     } catch (error) {
       console.error('Error sending message:', error);

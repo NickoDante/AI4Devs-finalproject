@@ -79,14 +79,19 @@ Estos son los comandos disponibles:
     const cacheKey = `${this.CACHE_NAMESPACE}:${validation.spaceKey || 'default'}:${searchQuery}`;
     const cachedResults = await this.cachePort.get<SearchResult[]>(cacheKey);
     if (cachedResults) {
+      const hasResults = cachedResults.length > 0;
       return {
         content: this.formatSearchResults(cachedResults, searchQuery, validation.spaceKey, validation.spaceName),
         type: 'text',
-        metadata: {
-          source: 'cache',
-          confidence: 0.8,
+        metadata: hasResults ? {
+          source: `Confluence - ${validation.spaceName || validation.spaceKey}`,
+          confidence: this.calculateConfidence(cachedResults, searchQuery),
           keywords: searchQuery,
           spaceKey: validation.spaceKey
+        } : {
+          keywords: searchQuery,
+          spaceKey: validation.spaceKey,
+          emptyResults: true
         }
       };
     }
@@ -101,14 +106,19 @@ Estos son los comandos disponibles:
       }
 
       // 5. Formatear y devolver resultados
+      const hasResults = results.length > 0;
       return {
         content: this.formatSearchResults(results, searchQuery, validation.spaceKey, validation.spaceName),
         type: 'text',
-        metadata: {
-          source: 'knowledge_base',
-          confidence: 1,
+        metadata: hasResults ? {
+          source: `Confluence - ${validation.spaceName || validation.spaceKey}`,
+          confidence: this.calculateConfidence(results, searchQuery),
           keywords: searchQuery,
           spaceKey: validation.spaceKey
+        } : {
+          keywords: searchQuery,
+          spaceKey: validation.spaceKey,
+          emptyResults: true
         }
       };
     } catch (error) {
@@ -127,10 +137,10 @@ Estos son los comandos disponibles:
 
   private formatSearchResults(results: SearchResult[], query: string, spaceKey?: string, spaceName?: string): string {
     if (!results.length) {
-      return `❌ No se encontraron resultados para "${query}" en ${spaceName || spaceKey || 'la base de conocimiento'}.`;
+      return `👀 Ups, con todos mis ojos la verdad no encontré nada sobre "${query}" en ${spaceName || spaceKey || 'la base de conocimiento'}.`;
     }
 
-    const header = `🔍 *Resultados para "${query}" en ${spaceName || spaceKey}:*\n`;
+    const header = `🔍 *Aquí tienes lo que encontré sobre tu búsqueda "${query}" en ${spaceName || spaceKey}:*\n`;
     
     // Ordenar resultados por relevancia
     const sortedResults = results.sort((a, b) => b.relevance - a.relevance);
@@ -174,5 +184,21 @@ Estos son los comandos disponibles:
       : '';
 
     return `${header}\n${formattedResults}${moreResultsMessage}`;
+  }
+
+  // Método para calcular la confianza basada en la relevancia de los resultados
+  private calculateConfidence(results: SearchResult[], query: string): number {
+    if (!results.length) return 0;
+    
+    // Obtener los primeros 3 resultados más relevantes
+    const topResults = results
+      .sort((a, b) => b.relevance - a.relevance)
+      .slice(0, 3);
+    
+    // Calcular la confianza como el promedio de relevancia de los top resultados
+    const averageRelevance = topResults.reduce((sum, result) => sum + result.relevance, 0) / topResults.length;
+    
+    // Normalizar entre 0 y 1, y redondear a 2 decimales
+    return Math.round(averageRelevance * 100) / 100;
   }
 } 

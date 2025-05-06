@@ -153,6 +153,12 @@ export class SlackAdapter implements MessagePort {
           type: 'mention'
         });
 
+        // Agregar tipo de mensaje en metadata para formatear correctamente
+        if (!botResponse.metadata) {
+          botResponse.metadata = {};
+        }
+        botResponse.metadata.messageType = 'mention';
+
         await say(this.formatResponse(botResponse));
       } catch (error) {
         console.error('Error processing mention:', error);
@@ -446,8 +452,11 @@ export class SlackAdapter implements MessagePort {
       }
     });
 
-    // Agregar fuente si existe
-    if (response.metadata?.source) {
+    // Verificar si la respuesta proviene de una mención del bot (mention)
+    const isMention = response.metadata?.messageType === 'mention';
+
+    // Agregar fuente si existe y no es una mención
+    if (response.metadata?.source && !isMention) {
       blocks.push({
         type: 'context',
         elements: [{
@@ -457,8 +466,8 @@ export class SlackAdapter implements MessagePort {
       });
     }
 
-    // Agregar nivel de confianza si existe
-    if (response.metadata?.confidence) {
+    // Agregar nivel de confianza si existe y no es una mención
+    if (response.metadata?.confidence && !isMention) {
       blocks.push({
         type: 'context',
         elements: [{

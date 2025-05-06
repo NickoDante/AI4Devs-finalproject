@@ -32,12 +32,11 @@ export class ProcessMessageUseCase {
 
       // Respuesta por defecto para otros tipos de mensajes
       return {
-        content: `¡Hola! 👋 Estos son los comandos disponibles:
+        content: `¡Hola! 👋 Soy *TG: The Guardian, el asistente IA* de Teravision Games a tu servicio 👁️.
+
+Estos son los comandos disponibles:
 • \`/tg-search <palabras clave> [-- <espacio>]\` - Buscar en la base de conocimiento
-  Recuerda que los espacios en Confluence disponibles son: 
-    * TKA: Teravision Knowledge Archive (espacio por defecto)
-    * NVP: Proyecto Código: NVP
-• \`/tg-question [pregunta]\` - Hacer una pregunta específica. Recuerda terminarla con "?".
+• \`/tg-question [pregunta]\` - Realiza cualquier pregunta que se te ocurra.
 • \`/tg-summary [texto]\` - Generar un resumen de un link en especifico.`,
         type: 'text',
         metadata: {

@@ -27,7 +27,13 @@
     "test:coverage": "jest --coverage",
     "test:llama": "node scripts/test-llama.mjs",
     "download:llama": "node scripts/download-llama-model.mjs",
-    "setup": "npm install && npm run download:llama"
+    "setup": "npm install && npm run download:llama",
+    "test:watch": "jest --watch",
+    "test:performance": "npx ts-node src/tests/performance/run-performance-tests.ts",
+    "test:performance:unit": "jest commands.performance.test.ts",
+    "test:feedback": "jest feedback.test.ts",
+    "test:metrics": "npx ts-node src/tests/quick-metrics-ratelimit-test.ts",
+    "test:systems": "npm run test:performance && npm run test:metrics"
   },
   "dependencies": {
     "@slack/bolt": "^3.17.1",

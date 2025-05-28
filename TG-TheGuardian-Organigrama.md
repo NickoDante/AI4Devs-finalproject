@@ -245,9 +245,9 @@ Etapa 3
   mejorando la capacidad de mantenimiento del sistema.
 * Objetivos:
 - (✅) Implementar logging avanzado
-- ( ) Crear sistema de métricas
+- (✅) Crear sistema de métricas
 - (✅) Optimizar manejo de errores
-- ( ) Pruebas de robustez
+- (✅) Pruebas de robustez
 
 * Martes 27 de Mayo, 2025
 * Semana #6
@@ -259,7 +259,7 @@ Etapa 3
   mejorando el control de acceso y la protección de datos,
   mientras se optimiza el consumo de recursos.
 * Objetivos:
-- ( ) Implementar rate limiting
+- (✅) Implementar rate limiting
 - ( ) Mejorar seguridad general
 - (✅) Optimizar consumo de recursos
 - ( ) Pruebas de carga

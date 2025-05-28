@@ -9,6 +9,7 @@ import { CachePort } from '../../domain/ports/CachePort';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { ProcessQuestionUseCase } from '../../application/use-cases/message/ProcessQuestionUseCase';
 import { ProcessSummaryUseCase, SummaryRequest } from '../../application/use-cases/summary/ProcessSummaryUseCase';
+import { ProcessFeedbackUseCase, CreateFeedbackRequest } from '../../application/use-cases/feedback/ProcessFeedbackUseCase';
 import { SummaryCommand, SummaryValidationResult } from '../../application/commands/summary.command';
 import { container } from '../../infrastructure/di';
 import { Query } from '../../domain/models/Query';
@@ -38,6 +39,7 @@ export class SlackAdapter implements MessagePort {
   private processMessageUseCase: ProcessMessageUseCase | null = null;
   private processQuestionUseCase: ProcessQuestionUseCase | null = null;
   private processSummaryUseCase: ProcessSummaryUseCase | null = null;
+  private processFeedbackUseCase: ProcessFeedbackUseCase | null = null;
   private summaryCommand: SummaryCommand | null = null;
   private aiAdapter: AIAdapter | null = null;
   private knowledgePort: KnowledgePort | null = null;
@@ -109,6 +111,16 @@ export class SlackAdapter implements MessagePort {
       }
     }
     return this.processSummaryUseCase;
+  }
+
+  private getProcessFeedbackUseCase(): ProcessFeedbackUseCase {
+    if (!this.processFeedbackUseCase) {
+      this.processFeedbackUseCase = container.getProcessFeedbackUseCase();
+      if (!this.processFeedbackUseCase) {
+        throw new Error('ProcessFeedbackUseCase no está inicializado en el contenedor');
+      }
+    }
+    return this.processFeedbackUseCase;
   }
 
   private getAIAdapter(): AIAdapter {
@@ -1057,6 +1069,132 @@ export class SlackAdapter implements MessagePort {
             as_user: true
           });
         }
+      }
+    });
+
+    // Comando de feedback
+    app.command('/tg-feedback', async ({ command, ack, respond }) => {
+      await ack();
+      this.logger.info('Comando /tg-feedback recibido:', {
+        text: command.text,
+        user: command.user_name,
+        channel: command.channel_name
+      });
+
+      try {
+        // Detectar idioma
+        const language = this.detectLanguage(command.text);
+        
+        // Validar formato del comando: /tg-feedback [+1|-1] [comentario opcional]
+        const parts = command.text.trim().split(' ');
+        if (parts.length === 0 || parts[0] === '') {
+          await respond({
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: language === 'en' ? 
+                    "📝 *How to use feedback:*\n\n• `/tg-feedback +1` - Mark last response as helpful\n• `/tg-feedback -1` - Mark as not helpful\n• `/tg-feedback +1 Great explanation!` - Add a comment\n\n💡 _Tip: Your feedback helps improve The Guardian's responses._" :
+                    "📝 *Cómo usar el feedback:*\n\n• `/tg-feedback +1` - Marcar última respuesta como útil\n• `/tg-feedback -1` - Marcar como no útil\n• `/tg-feedback +1 ¡Excelente explicación!` - Agregar comentario\n\n💡 _Consejo: Tu feedback ayuda a mejorar las respuestas de The Guardian._"
+                }
+              }
+            ]
+          });
+          return;
+        }
+
+        const feedbackType = parts[0].trim();
+        const isHelpful = feedbackType === '+1';
+        const isNotHelpful = feedbackType === '-1';
+        
+        if (!isHelpful && !isNotHelpful) {
+          await respond({
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: language === 'en' ? 
+                    "❌ *Invalid feedback format.*\n\nPlease use:\n• `+1` for positive feedback\n• `-1` for negative feedback\n\n💡 _Example: `/tg-feedback +1` or `/tg-feedback -1 needs improvement`_" :
+                    "❌ *Formato de feedback inválido.*\n\nPor favor usa:\n• `+1` para feedback positivo\n• `-1` para feedback negativo\n\n💡 _Ejemplo: `/tg-feedback +1` o `/tg-feedback -1 necesita mejoras`_"
+                }
+              }
+            ]
+          });
+          return;
+        }
+
+        // Extraer comentario opcional (todo después del emoji)
+        const comment = parts.slice(1).join(' ').trim() || undefined;
+
+        // Crear solicitud de feedback
+        const feedbackRequest: CreateFeedbackRequest = {
+          responseId: `response_${command.channel_id}_${Date.now()}`, // ID temporal para MVP
+          userId: command.user_id,
+          isHelpful: isHelpful,
+          rating: isHelpful ? 5 : 1,
+          comment: comment,
+          categories: ['user_feedback'],
+          tags: [language, 'slack_command']
+        };
+
+        // Procesar feedback
+        const feedbackUseCase = this.getProcessFeedbackUseCase();
+        const savedFeedback = await feedbackUseCase.createFeedback(feedbackRequest);
+
+        // Responder al usuario
+        const successMessage = language === 'en' ? 
+          `✅ *Feedback received!*\n\nThank you for your ${isHelpful ? 'positive' : 'constructive'} feedback. This helps The Guardian improve.${comment ? `\n\n💬 Your comment: "${comment}"` : ''}` :
+          `✅ *¡Feedback recibido!*\n\nGracias por tu feedback ${isHelpful ? 'positivo' : 'constructivo'}. Esto ayuda a The Guardian a mejorar.${comment ? `\n\n💬 Tu comentario: "${comment}"` : ''}`;
+
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: successMessage
+              }
+            },
+            {
+              type: "context",
+              elements: [
+                {
+                  type: "mrkdwn",
+                  text: language === 'en' ? 
+                    `📊 Feedback ID: ${savedFeedback.id.substring(0, 8)}...` :
+                    `📊 ID de feedback: ${savedFeedback.id.substring(0, 8)}...`
+                }
+              ]
+            }
+          ]
+        });
+
+        this.logger.info('Feedback procesado exitosamente:', {
+          feedbackId: savedFeedback.id,
+          userId: command.user_id,
+          isHelpful: isHelpful,
+          hasComment: !!comment
+        });
+
+      } catch (error) {
+        this.logger.error('Error procesando feedback:', error);
+        const language = this.detectLanguage(command.text);
+        
+        await respond({
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: language === 'en' ? 
+                  "❌ *Error processing feedback.* Please try again later." :
+                  "❌ *Error al procesar feedback.* Por favor, inténtalo de nuevo más tarde."
+              }
+            }
+          ]
+        });
       }
     });
   }

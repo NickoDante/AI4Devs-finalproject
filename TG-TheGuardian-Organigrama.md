@@ -216,7 +216,7 @@ Etapa 3
 * Objetivos:
 - (✅) Implementar sistema de resúmenes avanzado
 - (✅) Optimizar prompts de LLM
-- ( ) Crear sistema de feedback
+- (✅) Crear sistema de feedback
 - (✅) Pruebas de generación de resúmenes
 
 * Miércoles 21 de Mayo, 2025

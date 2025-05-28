@@ -6,6 +6,7 @@ import { ConfluenceAdapter } from '../../adapters/confluence/ConfluenceAdapter';
 import { PDFAdapter } from '../../adapters/pdf/PDFAdapter';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { ProcessSummaryUseCase } from '../../application/use-cases/summary/ProcessSummaryUseCase';
+import { ProcessFeedbackUseCase } from '../../application/use-cases/feedback/ProcessFeedbackUseCase';
 import { MessagePort } from '../../domain/ports/MessagePort';
 import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
@@ -41,6 +42,7 @@ export class DependencyContainer {
     private useCases: {
         processMessage: ProcessMessageUseCase;
         processSummary: ProcessSummaryUseCase;
+        processFeedback: ProcessFeedbackUseCase;
     };
 
     private constructor() {
@@ -56,7 +58,8 @@ export class DependencyContainer {
 
         this.useCases = {
             processMessage: {} as ProcessMessageUseCase,
-            processSummary: {} as ProcessSummaryUseCase
+            processSummary: {} as ProcessSummaryUseCase,
+            processFeedback: {} as ProcessFeedbackUseCase
         };
     }
 
@@ -84,6 +87,11 @@ export class DependencyContainer {
 
             // Inicializar adaptadores
             this.services.persistence = new MongoDBAdapter(config.mongoUri || 'mongodb://localhost:27017/theguardian', this.services.logger);
+            
+            // Conectar a MongoDB
+            await this.services.persistence.connect();
+            this.services.logger.info('💾 MongoDB conectado exitosamente');
+            
             this.services.ai = new LlamaAdapter();
             this.services.messaging = new SlackAdapter(this.services.logger, this.services.cache);
             this.services.knowledge = new ConfluenceAdapter(this.services.logger);
@@ -105,6 +113,11 @@ export class DependencyContainer {
                 this.services.cache,
                 this.services.logger,
                 this.services.knowledge
+            );
+
+            this.useCases.processFeedback = new ProcessFeedbackUseCase(
+                this.services.persistence,
+                this.services.logger
             );
 
             // Iniciar servicios que requieren conexión
@@ -181,6 +194,10 @@ export class DependencyContainer {
 
     getProcessSummaryUseCase(): ProcessSummaryUseCase {
         return this.useCases.processSummary;
+    }
+
+    getProcessFeedbackUseCase(): ProcessFeedbackUseCase {
+        return this.useCases.processFeedback;
     }
 }
 

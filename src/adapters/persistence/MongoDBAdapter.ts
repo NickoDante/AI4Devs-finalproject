@@ -3,6 +3,7 @@ import { PersistencePort } from '../../domain/ports/PersistencePort';
 import { Message } from '../../domain/models/Message';
 import { Document } from '../../domain/models/ConfluenceDocument';
 import { User } from '../../domain/models/User';
+import { Feedback } from '../../domain/models/Feedback';
 import { Logger } from 'winston';
 
 export class MongoDBAdapter implements PersistencePort {
@@ -10,6 +11,7 @@ export class MongoDBAdapter implements PersistencePort {
   private messages!: Collection<Message>;
   private documents!: Collection<Document>;
   private users!: Collection<User>;
+  private feedbacks!: Collection<Feedback>;
   private logger: Logger;
 
   constructor(uri: string, logger: Logger) {
@@ -26,12 +28,16 @@ export class MongoDBAdapter implements PersistencePort {
       this.messages = db.collection('messages');
       this.documents = db.collection('documents');
       this.users = db.collection('users');
+      this.feedbacks = db.collection('feedbacks');
 
       // Crear índices
       await this.messages.createIndex({ channelId: 1 });
       await this.messages.createIndex({ userId: 1 });
       await this.documents.createIndex({ title: 'text', content: 'text' });
       await this.users.createIndex({ userId: 1 }, { unique: true });
+      await this.feedbacks.createIndex({ responseId: 1 });
+      await this.feedbacks.createIndex({ userId: 1 });
+      await this.feedbacks.createIndex({ createdAt: -1 });
     } catch (error) {
       this.logger.error('Error connecting to MongoDB:', error);
       throw error;
@@ -129,5 +135,94 @@ export class MongoDBAdapter implements PersistencePort {
       { returnDocument: 'after' }
     );
     return result ? (result as unknown as MongoDocument).value as User : null;
+  }
+
+  // Métodos para feedback
+  async saveFeedback(feedback: Feedback): Promise<Feedback> {
+    try {
+      if (!this.feedbacks) {
+        throw new Error('MongoDB feedbacks collection not initialized. Call connect() first.');
+      }
+      const result = await this.feedbacks.insertOne(feedback);
+      this.logger.info('Feedback saved to MongoDB', { feedbackId: feedback.id });
+      return feedback;
+    } catch (error) {
+      this.logger.error('Error saving feedback to MongoDB', { error, feedbackId: feedback.id });
+      throw error;
+    }
+  }
+
+  async getFeedbackById(feedbackId: string): Promise<Feedback | null> {
+    try {
+      if (!this.feedbacks) {
+        this.logger.error('MongoDB feedbacks collection not initialized');
+        return null;
+      }
+      return await this.feedbacks.findOne({ id: feedbackId });
+    } catch (error) {
+      this.logger.error('Error getting feedback by ID from MongoDB', { error, feedbackId });
+      return null;
+    }
+  }
+
+  async getFeedbackByResponseId(responseId: string): Promise<Feedback[]> {
+    try {
+      if (!this.feedbacks) {
+        this.logger.error('MongoDB feedbacks collection not initialized');
+        return [];
+      }
+      return await this.feedbacks
+        .find({ responseId })
+        .sort({ createdAt: -1 })
+        .toArray();
+    } catch (error) {
+      this.logger.error('Error getting feedback by response ID from MongoDB', { error, responseId });
+      return [];
+    }
+  }
+
+  async getFeedbackByUserId(userId: string, limit = 50): Promise<Feedback[]> {
+    try {
+      return await this.feedbacks
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .toArray();
+    } catch (error) {
+      this.logger.error('Error getting feedback by user ID from MongoDB', { error, userId });
+      return [];
+    }
+  }
+
+  async updateFeedback(feedbackId: string, updates: Partial<Feedback>): Promise<Feedback | null> {
+    try {
+      const result = await this.feedbacks.findOneAndUpdate(
+        { id: feedbackId },
+        { $set: updates },
+        { returnDocument: 'after' }
+      );
+      
+      if (result) {
+        this.logger.info('Feedback updated in MongoDB', { feedbackId });
+        return result as unknown as Feedback;
+      }
+      
+      return null;
+    } catch (error) {
+      this.logger.error('Error updating feedback in MongoDB', { error, feedbackId });
+      return null;
+    }
+  }
+
+  async deleteFeedback(feedbackId: string): Promise<boolean> {
+    try {
+      const result = await this.feedbacks.deleteOne({ id: feedbackId });
+      const success = result.deletedCount > 0;
+      this.logger.info('Feedback deletion attempt', { feedbackId, success });
+      return success;
+    } catch (error) {
+      this.logger.error('Error deleting feedback from MongoDB', { error, feedbackId });
+      return false;
+    }
   }
 } 

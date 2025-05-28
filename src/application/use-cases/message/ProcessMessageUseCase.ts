@@ -35,18 +35,28 @@ export class ProcessMessageUseCase {
         content: `¡Hola! 👋 Soy *TG: The Guardian, el asistente IA* de Teravision Games a tu servicio 👁️.
 
 Estos son los comandos disponibles:
+
+BUSQUEDA:
 • \`/tg-search <palabras clave> [-- <espacio>]\` - Buscar en la base de conocimiento
+
+PREGUNTAS:
 • \`/tg-question [pregunta]\` - Realiza cualquier pregunta que se te ocurra.
-• \`/tg-summary [URL]\` - Generar un resumen de una URL (especialmente Confluence)
+
+RESUMEN:
+🔗 **Para resumir URLs:**
+• \`/tg-summary [URL] [Lenguaje]\` - Generar un resumen de una URL (especialmente Confluence)
 
 📎 **Para resumir archivos PDF:**
 1. 📤 Sube tu archivo PDF al canal
 2. 🏷️ Menciona: \`@TG-TheGuardian resumen\` (o \`summary\` en inglés)
 
-🔗 **Para resumir URLs:**
-• \`/tg-summary https://confluence.empresa.com/page\`
-• \`/tg-summary https://confluence.empresa.com/page es\` (español)
-• \`/tg-summary https://confluence.empresa.com/page en\` (inglés)`,
+FEEDBACK:
+• \`/tg-feedback +1/-1 [comentario]\` - Dar feedback positivo/negativo sobre la última respuesta
+
+💬 **Para dar feedback:**
+• \`/tg-feedback +1\` - Marcar respuesta como útil
+• \`/tg-feedback -1\` - Marcar respuesta como no útil
+• \`/tg-feedback +1 ¡Excelente información!\` - Agregar comentario`,
         type: 'text',
         metadata: {
           source: 'Sistema',

@@ -37,7 +37,16 @@ export class ProcessMessageUseCase {
 Estos son los comandos disponibles:
 • \`/tg-search <palabras clave> [-- <espacio>]\` - Buscar en la base de conocimiento
 • \`/tg-question [pregunta]\` - Realiza cualquier pregunta que se te ocurra.
-• \`/tg-summary [texto]\` - Generar un resumen de un link en especifico.`,
+• \`/tg-summary [URL]\` - Generar un resumen de una URL (especialmente Confluence)
+
+📎 **Para resumir archivos PDF:**
+1. 📤 Sube tu archivo PDF al canal
+2. 🏷️ Menciona: \`@TG-TheGuardian resumen\` (o \`summary\` en inglés)
+
+🔗 **Para resumir URLs:**
+• \`/tg-summary https://confluence.empresa.com/page\`
+• \`/tg-summary https://confluence.empresa.com/page es\` (español)
+• \`/tg-summary https://confluence.empresa.com/page en\` (inglés)`,
         type: 'text',
         metadata: {
           source: 'Sistema',

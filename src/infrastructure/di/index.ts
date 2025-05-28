@@ -3,12 +3,15 @@ import { LlamaAdapter } from '../../adapters/llm/LlamaAdapter';
 import { SlackAdapter } from '../../adapters/slack/SlackAdapter';
 import { RedisAdapter } from '../../adapters/cache/RedisAdapter';
 import { ConfluenceAdapter } from '../../adapters/confluence/ConfluenceAdapter';
+import { PDFAdapter } from '../../adapters/pdf/PDFAdapter';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
+import { ProcessSummaryUseCase } from '../../application/use-cases/summary/ProcessSummaryUseCase';
 import { MessagePort } from '../../domain/ports/MessagePort';
 import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
 import { CachePort } from '../../domain/ports/CachePort';
 import { KnowledgePort } from '../../domain/ports/KnowledgePort';
+import { PDFPort } from '../../domain/ports/PDFPort';
 import { RedisConnectionFactory, RedisConfig } from '../cache/RedisConnectionFactory';
 import logger from '../logging/Logger';
 import { Logger } from 'winston';
@@ -31,11 +34,13 @@ export class DependencyContainer {
         messaging: MessagePort;
         cache: CachePort;
         knowledge: KnowledgePort;
+        pdf: PDFPort;
         logger: Logger;
     };
 
     private useCases: {
         processMessage: ProcessMessageUseCase;
+        processSummary: ProcessSummaryUseCase;
     };
 
     private constructor() {
@@ -45,11 +50,13 @@ export class DependencyContainer {
             messaging: {} as MessagePort,
             cache: {} as CachePort,
             knowledge: {} as KnowledgePort,
+            pdf: {} as PDFPort,
             logger: logger
         };
 
         this.useCases = {
-            processMessage: {} as ProcessMessageUseCase
+            processMessage: {} as ProcessMessageUseCase,
+            processSummary: {} as ProcessSummaryUseCase
         };
     }
 
@@ -80,6 +87,7 @@ export class DependencyContainer {
             this.services.ai = new LlamaAdapter();
             this.services.messaging = new SlackAdapter(this.services.logger, this.services.cache);
             this.services.knowledge = new ConfluenceAdapter(this.services.logger);
+            this.services.pdf = new PDFAdapter(this.services.logger);
 
             // Inicializar casos de uso
             this.useCases.processMessage = new ProcessMessageUseCase(
@@ -89,6 +97,14 @@ export class DependencyContainer {
                 this.services.cache,
                 this.services.knowledge,
                 this.services.logger
+            );
+
+            this.useCases.processSummary = new ProcessSummaryUseCase(
+                this.services.pdf,
+                this.services.ai,
+                this.services.cache,
+                this.services.logger,
+                this.services.knowledge
             );
 
             // Iniciar servicios que requieren conexión
@@ -151,12 +167,20 @@ export class DependencyContainer {
         return this.services.knowledge;
     }
 
+    getPDFAdapter(): PDFPort {
+        return this.services.pdf;
+    }
+
     getLogger(): Logger {
         return this.services.logger;
     }
 
     getProcessMessageUseCase(): ProcessMessageUseCase {
         return this.useCases.processMessage;
+    }
+
+    getProcessSummaryUseCase(): ProcessSummaryUseCase {
+        return this.useCases.processSummary;
     }
 }
 

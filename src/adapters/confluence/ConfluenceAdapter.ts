@@ -327,8 +327,17 @@ export class ConfluenceAdapter implements KnowledgePort {
     
     const queryTerms = query.toLowerCase().split(/\s+/);
     const matches = queryTerms.reduce((count, term) => {
-      const regex = new RegExp(term, 'g');
+      try {
+        // Escapar caracteres especiales de regex para evitar errores
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedTerm, 'g');
       return count + (textToSearch.match(regex)?.length || 0);
+      } catch (error) {
+        // Si hay algún error con la regex, simplemente usar indexOf como fallback
+        this.logger.warn(`Error en regex para término "${term}":`, error);
+        const occurrences = textToSearch.split(term).length - 1;
+        return count + occurrences;
+      }
     }, 0);
 
     // Normalizar relevancia entre 0 y 1

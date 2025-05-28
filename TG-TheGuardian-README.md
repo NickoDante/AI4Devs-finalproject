@@ -20,9 +20,29 @@ Esta funcionalidad permite a los empleados de Teravision Games encontrar rápida
 
 The Guardian puede responder a consultas administrativas frecuentes relacionadas con procesos internos, políticas de la empresa, y procedimientos, aliviando la carga sobre el personal de recursos humanos y administración. Los empleados pueden preguntar sobre temas como "¿Cómo solicito un certificado laboral?", "¿Cuál es el proceso para pedir nuevos equipos?" o "¿Qué pasos debo seguir para solicitar vacaciones?", recibiendo respuestas precisas extraídas directamente de la documentación oficial. Esta funcionalidad aborda específicamente la necesidad identificada por Kata de tener acceso a información sobre "certificado laboral, con acceso a confluence donde esta el Form" y "adquisición de elementos de trabajo", automatizando el primer nivel de soporte para consultas administrativas rutinarias.
 
-** 3. Resumen de Documentos y Páginas de Confluence**
+** 3. Resumen de Documentos y Páginas de Confluence (Sistema Dual)**
 
-Esta característica permite a los miembros del equipo obtener rápidamente la esencia de documentos extensos sin tener que leerlos completamente, ahorrando tiempo valioso durante la jornada laboral. Los usuarios pueden solicitar a The Guardian que "resuma la página sobre el sistema de monetización" o "dame los puntos clave del documento de diseño del último proyecto", recibiendo un resumen conciso que destaca la información más relevante. Esta funcionalidad responde indirectamente a varias necesidades expresadas por el equipo, particularmente las relacionadas con documentación eficiente (mencionada por Jesus, JJ, Jero, Julian, Duvan, y Cesar), ya que permite a los empleados consumir información técnica y de procesos de manera más eficiente, facilitando la comprensión rápida de documentos complejos y extensos.
+Esta característica permite a los miembros del equipo obtener rápidamente la esencia de documentos extensos sin tener que leerlos completamente, ahorrando tiempo valioso durante la jornada laboral. The Guardian implementa un **sistema dual innovador** que maneja diferentes tipos de contenido a través de canales específicos, resolviendo las limitaciones técnicas de Slack:
+
+**Sistema Dual de Procesamiento:**
+
+- **Comandos Slash para URLs** (`/tg-summary [URL]`): Los usuarios pueden solicitar resúmenes de páginas web y documentos de Confluence proporcionando la URL directamente. El sistema detecta automáticamente si es una URL de Confluence o web general y aplica el procesamiento apropiado. Ejemplo: `/tg-summary https://teravisiongames.atlassian.net/wiki/spaces/TKA/pages/123`
+
+- **Menciones para Archivos Adjuntos** (`@TG-TheGuardian summary`): Para documentos locales (PDFs, Word, TXT, HTML), los usuarios suben el archivo al canal de Slack y mencionan al bot. Esta separación responde a las limitaciones técnicas de Slack donde los comandos slash no pueden recibir archivos adjuntos directamente.
+
+**Características Avanzadas:**
+- **Mensajes Educativos**: Cuando los usuarios intentan usar el canal incorrecto, el sistema proporciona instrucciones claras sobre cómo usar cada opción
+- **Validación Inteligente**: Diferentes validaciones según el tipo de contenido (archivos vs URLs)
+- **Información Detallada**: Muestra exactamente qué está procesando (nombre del archivo, tamaño, tipo de URL)
+- **Manejo de Errores Específico**: Mensajes de error contextuales que guían al usuario hacia la solución
+
+**Workarounds Implementados:**
+- Detección de URLs en texto plano cuando los hipervínculos no se formatean correctamente
+- Extracción de dominios de Confluence sin protocolo
+- Manejo de redirecciones HTTP 302 comunes en Confluence
+- Descarga segura de archivos con autenticación Bearer
+
+Esta funcionalidad responde indirectamente a varias necesidades expresadas por el equipo, particularmente las relacionadas con documentación eficiente (mencionada por Jesus, JJ, Jero, Julian, Duvan, y Cesar), ya que permite a los empleados consumir información técnica y de procesos de manera más eficiente, facilitando la comprensión rápida de documentos complejos y extensos tanto internos como externos.
 
 ## Necesidades que Cubre
 
@@ -99,6 +119,77 @@ The Guardian implementará las siguientes opciones predefinidas para facilitar s
 4. **Sugerencias contextuales**:
    - Recomendaciones basadas en el historial de consultas
    - Sugerencias de documentos relacionados con la consulta actual
+
+## Sistema Dual para Resúmenes
+
+TG: The Guardian implementa un **sistema dual innovador** para el comando `/tg-summary` que resuelve las limitaciones técnicas de Slack y proporciona una experiencia de usuario optimizada:
+
+### **Opción 1: Comandos Slash - Para URLs**
+```
+/tg-summary [URL]
+```
+
+**Casos de Uso:**
+- Páginas de Confluence: `/tg-summary https://teravisiongames.atlassian.net/wiki/spaces/TKA/pages/123`
+- Sitios web externos: `/tg-summary https://ejemplo.com/documento`
+- Documentos en línea: `/tg-summary https://docs.google.com/document/d/abc123`
+
+**Características:**
+- ✅ Detección automática del tipo de URL (Confluence vs web general)
+- ✅ Workarounds para hipervínculos mal formateados
+- ✅ Manejo de redirecciones HTTP 302
+- ✅ Extracción de URLs desde texto plano
+
+### **Opción 2: Menciones - Para Archivos Adjuntos**
+```
+@TG-TheGuardian summary
+```
+
+**Casos de Uso:**
+- Documentos PDF: Subir archivo → `@TG-TheGuardian summary`
+- Archivos Word: Subir .docx → `@TG-TheGuardian resumen`
+- Documentos de texto: Subir .txt → `@TG-TheGuardian summary`
+
+**Características:**
+- ✅ Soporte para múltiples formatos (PDF, Word, TXT, HTML)
+- ✅ Validación de tamaño (máximo 50MB)
+- ✅ Descarga segura con autenticación Bearer
+- ✅ Información detallada del archivo procesado
+
+### **Mensajes Educativos**
+
+Cuando los usuarios intentan usar el canal incorrecto, el sistema proporciona mensajes educativos claros:
+
+**Comando vacío:**
+```
+📎 Para resumir archivos adjuntos:
+1. 📤 Sube tu archivo al canal
+2. 🏷️ Menciona al bot: @TG-TheGuardian summary
+
+Los comandos slash (/tg-summary) solo funcionan con URLs.
+
+💡 Tip: Esta es una limitación de Slack - los comandos slash no pueden recibir archivos adjuntos.
+```
+
+**Mención sin archivo:**
+```
+📎 No se detectaron archivos adjuntos en tu mensaje.
+
+Para resumir archivos:
+1. 📤 Sube tu archivo al canal
+2. 🏷️ Menciona: @TG-TheGuardian summary
+
+Para resumir URLs, usa: /tg-summary [URL]
+```
+
+### **Beneficios del Sistema Dual**
+
+1. **Claridad de Uso**: Los usuarios entienden exactamente qué método usar para cada tipo de contenido
+2. **Experiencia Optimizada**: Cada canal está optimizado para su tipo de contenido específico
+3. **Manejo de Limitaciones**: Resuelve elegantemente las restricciones técnicas de Slack
+4. **Feedback Educativo**: Guía a los usuarios hacia el uso correcto sin frustración
+5. **Validación Específica**: Diferentes validaciones según el tipo de entrada
+
 ---
 
 ## Diagrama Recomendado: Diagrama de Componentes

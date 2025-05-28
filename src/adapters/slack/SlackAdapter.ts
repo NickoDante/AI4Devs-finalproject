@@ -8,6 +8,8 @@ import { CacheManager } from '../../infrastructure/cache/CacheManager';
 import { CachePort } from '../../domain/ports/CachePort';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { ProcessQuestionUseCase } from '../../application/use-cases/message/ProcessQuestionUseCase';
+import { ProcessSummaryUseCase, SummaryRequest } from '../../application/use-cases/summary/ProcessSummaryUseCase';
+import { SummaryCommand, SummaryValidationResult } from '../../application/commands/summary.command';
 import { container } from '../../infrastructure/di';
 import { Query } from '../../domain/models/Query';
 import { createHash } from 'crypto';
@@ -22,12 +24,21 @@ interface SlackMessageEvent {
   type: string;
 }
 
+interface ParsedSummaryCommand {
+  url: string;
+  language: 'es' | 'en';
+  originalText: string;
+  hasLanguageParam: boolean;
+}
+
 export class SlackAdapter implements MessagePort {
   private app: App | null = null;
   private validationMiddleware: ValidationMiddleware;
   private cacheManager: CacheManager;
   private processMessageUseCase: ProcessMessageUseCase | null = null;
   private processQuestionUseCase: ProcessQuestionUseCase | null = null;
+  private processSummaryUseCase: ProcessSummaryUseCase | null = null;
+  private summaryCommand: SummaryCommand | null = null;
   private aiAdapter: AIAdapter | null = null;
   private knowledgePort: KnowledgePort | null = null;
 
@@ -90,6 +101,16 @@ export class SlackAdapter implements MessagePort {
     return this.processQuestionUseCase;
   }
 
+  private getProcessSummaryUseCase(): ProcessSummaryUseCase {
+    if (!this.processSummaryUseCase) {
+      this.processSummaryUseCase = container.getProcessSummaryUseCase();
+      if (!this.processSummaryUseCase) {
+        throw new Error('ProcessSummaryUseCase no está inicializado en el contenedor');
+      }
+    }
+    return this.processSummaryUseCase;
+  }
+
   private getAIAdapter(): AIAdapter {
     if (!this.aiAdapter) {
       this.aiAdapter = container.getAIAdapter();
@@ -108,6 +129,13 @@ export class SlackAdapter implements MessagePort {
       }
     }
     return this.knowledgePort;
+  }
+
+  private getSummaryCommand(): SummaryCommand {
+    if (!this.summaryCommand) {
+      this.summaryCommand = new SummaryCommand(this.logger);
+    }
+    return this.summaryCommand;
   }
 
   private assertAppInitialized(): void {
@@ -171,6 +199,211 @@ export class SlackAdapter implements MessagePort {
         const userInfo = await client.users.info({ user: event.user });
         const username = userInfo.user?.real_name || userInfo.user?.name || 'Unknown User';
 
+        // NUEVO: Detectar si la mención incluye palabras clave de resumen en inglés y español
+        const mentionText = event.text.toLowerCase();
+        const isSummaryRequest = mentionText.includes('summary') || 
+                                mentionText.includes('resumen') || 
+                                mentionText.includes('resume');
+        
+        if (isSummaryRequest) {
+          this.logger.info('🔍 Mención de resumen detectada:', {
+            text: event.text,
+            user: event.user,
+            hasFiles: !!(event.files && event.files.length > 0),
+            filesCount: event.files ? event.files.length : 0,
+            detectedKeywords: {
+              summary: mentionText.includes('summary'),
+              resumen: mentionText.includes('resumen'),
+              resume: mentionText.includes('resume')
+            }
+          });
+          
+          // Detectar idioma basado en la palabra clave utilizada
+          const isEnglish = mentionText.includes('summary') || mentionText.includes('resume');
+          const isSpanish = mentionText.includes('resumen');
+          
+          try {
+            // Crear mensaje enriquecido para el comando summary
+            const summaryMessage: Message = {
+              content: event.text,
+              userId: event.user,
+              username,
+              channel: event.channel,
+              timestamp: new Date(Number(event.ts) * 1000),
+              type: 'mention',
+              metadata: { 
+                command: 'summary',
+                // Incluir archivos si están presentes
+                slackFiles: event.files ? event.files.map((file: any) => ({
+                  id: file.id,
+                  name: file.name || 'archivo_sin_nombre',
+                  url_private: file.url_private || file.permalink,
+                  permalink: file.permalink || file.url_private,
+                  size: file.size || 0,
+                  mimetype: file.mimetype || 'application/octet-stream'
+                })) : undefined
+              }
+            };
+            
+            // Procesar como comando summary
+            const summaryCommand = this.getSummaryCommand();
+            const validation = await summaryCommand.validate(summaryMessage);
+            
+            if (validation.isValid) {
+              let responseText = '';
+              
+              if (validation.type === 'file_attachment') {
+                const fileName = validation.fileInfo?.name || (isEnglish ? 'file' : 'archivo');
+                const fileSize = validation.fileInfo?.size ? 
+                  ` (${(validation.fileInfo.size / (1024 * 1024)).toFixed(2)}MB)` : '';
+                
+                if (isEnglish) {
+                  responseText = `📎 Processing attached document for summary...
+
+📄 **File detected:** "${fileName}"${fileSize}
+🔍 **Type:** ${validation.fileInfo?.mimetype}
+✅ Input validated successfully. Generating summary...`;
+                } else {
+                  responseText = `📎 Procesando documento adjunto para resumen...
+
+📄 **Archivo detectado:** "${fileName}"${fileSize}
+🔍 **Tipo:** ${validation.fileInfo?.mimetype}
+✅ Entrada validada exitosamente. Generando resumen...`;
+                }
+              } else {
+                if (isEnglish) {
+                  responseText = `🌐 Processing ${validation.metadata?.isConfluence ? 'Confluence URL' : 'URL'} for summary...
+
+🔗 **URL detected:** ${validation.content}
+✅ Input validated successfully. Generating summary...`;
+                } else {
+                  responseText = `🌐 Procesando ${validation.metadata?.isConfluence ? 'URL de Confluence' : 'URL'} para resumen...
+
+🔗 **URL detectada:** ${validation.content}
+✅ Entrada validada exitosamente. Generando resumen...`;
+                }
+              }
+              
+              await say({
+                text: responseText,
+                blocks: [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: responseText
+                    }
+                  }
+                ],
+                thread_ts: event.ts
+              });
+              
+              // Crear solicitud de resumen basada en la validación
+              let summaryRequest: SummaryRequest;
+
+              if (validation.type === 'file_attachment' && validation.fileInfo) {
+                // Para archivos adjuntos, necesitamos descargar el archivo de Slack
+                try {
+                  this.logger.info('Descargando archivo de Slack:', {
+                    fileName: validation.fileInfo.name,
+                    fileSize: validation.fileInfo.size,
+                    url: validation.fileInfo.url
+                  });
+
+                  // Descargar el archivo desde Slack
+                  const fileBuffer = await this.downloadSlackFile(validation.fileInfo.url);
+                  
+                  summaryRequest = {
+                    type: 'pdf_buffer',
+                    content: fileBuffer,
+                    metadata: {
+                      userId: event.user,
+                      channel: event.channel,
+                      fileName: validation.fileInfo.name,
+                      fileSize: validation.fileInfo.size
+                    }
+                  };
+                } catch (downloadError) {
+                  this.logger.error('Error descargando archivo de Slack:', downloadError);
+                  throw new Error(`No se pudo descargar el archivo: ${downloadError instanceof Error ? downloadError.message : 'Error desconocido'}`);
+                }
+              } else {
+                // Para URLs normales
+                summaryRequest = {
+                  type: 'url',
+                  content: validation.content || event.text || '',
+                  metadata: {
+                    userId: event.user,
+                    channel: event.channel
+                  }
+                };
+              }
+
+              // Procesar el resumen
+              const summaryUseCase = this.getProcessSummaryUseCase();
+              const botResponse = await summaryUseCase.execute(summaryMessage, summaryRequest, {
+                maxLength: 500,
+                language: isEnglish ? 'en' : 'es',
+                includeMetadata: true,
+                format: 'structured'
+              });
+
+              // Enviar respuesta final
+              if (this.app) {
+                const formattedResponse = this.formatResponse(botResponse);
+                await this.app.client.chat.postMessage({
+                  channel: event.channel,
+                  text: botResponse.content,
+                  blocks: formattedResponse.blocks,
+                  thread_ts: event.ts,
+                  as_user: true
+                });
+              }
+
+              return; // Salir aquí para no procesar como mensaje normal
+            } else {
+              // Error de validación en mención de resumen
+              this.logger.error('Error de validación en mención de resumen:', validation.error);
+              await say({
+                text: validation.error || 'Error de validación',
+                blocks: [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: validation.error || 'Error de validación desconocido'
+                    }
+                  }
+                ],
+                thread_ts: event.ts
+              });
+              return;
+            }
+          } catch (summaryError) {
+            // Error específico en procesamiento de resumen
+            this.logger.error('Error procesando resumen en mención:', summaryError);
+            const errorMessage = isEnglish ? 
+              '❌ *Error generating summary.* There was a problem processing your content. Please try again.' :
+              '❌ *Error al generar el resumen.* Hubo un problema al procesar tu contenido. Por favor, inténtalo de nuevo.';
+            
+            await say({
+              text: errorMessage,
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: errorMessage
+                  }
+                }
+              ],
+              thread_ts: event.ts
+            });
+            return;
+          }
+        }
+
+        // Procesamiento normal de menciones (no summary)
         const botResponse = await this.processMessage({
           content: event.text,
           userId: event.user,
@@ -440,56 +673,388 @@ export class SlackAdapter implements MessagePort {
     });
 
     // Comando de resumen
-    app.command('/tg-summary', async ({ command, ack, respond }) => {
+    app.command('/tg-summary', async ({ command, ack, respond, client }) => {
       await ack();
       this.logger.info('📝 Comando summary recibido:', command);
-      try {
-        // Validar el comando
-        await this.validationMiddleware.validateCommand('/tg-summary')({ body: command } as any, { json: respond } as any, async () => {
-          const botResponse = await this.processCommand(command, '/tg-summary');
-          const formattedResponse = this.formatResponse(botResponse);
+      
+      // DEBUG: Agregar logging detallado del objeto command
+      this.logger.info('DEBUG - Estructura completa del comando:', {
+        text: command.text,
+        user_id: command.user_id,
+        user_name: command.user_name,
+        channel_id: command.channel_id,
+        channel_name: command.channel_name,
+        team_id: command.team_id,
+        team_domain: command.team_domain,
+        enterprise_id: command.enterprise_id,
+        enterprise_name: command.enterprise_name,
+        command: command.command,
+        token: command.token ? '[PRESENTE]' : '[AUSENTE]',
+        response_url: command.response_url ? '[PRESENTE]' : '[AUSENTE]',
+        trigger_id: command.trigger_id ? '[PRESENTE]' : '[AUSENTE]',
+        files: command.files || 'NO_FILES',
+        allKeys: Object.keys(command)
+      });
+      
+      // Variable para controlar mensajes de espera
+      let processingComplete = false;
+      let waitingMessageInterval: NodeJS.Timeout | null = null;
+      let initialMessageTs: string | undefined;
           
-          // En lugar de usar el método respond, usamos chat.postMessage para más control
+      // NUEVO: Parsear comando con parámetros de idioma
+      const parsedCommand = this.parseSummaryCommand(command.text || '');
+      const language = parsedCommand.language;
+      
+      this.logger.info('Comando /tg-summary parseado:', {
+        originalText: command.text,
+        extractedUrl: parsedCommand.url,
+        detectedLanguage: parsedCommand.language,
+        hasLanguageParam: parsedCommand.hasLanguageParam
+      });
+      
+      try {
+        // Enviar mensaje inicial de procesamiento
           if (this.app) {
-            await this.app.client.chat.postMessage({
+          const initialResponse = await this.app.client.chat.postMessage({
               channel: command.channel_id,
-              text: botResponse.content,
-              blocks: formattedResponse.blocks,
-              thread_ts: formattedResponse.thread_ts,
-              as_user: true // Asegura que se muestre como el bot con su avatar y nombre
-            });
-          } else {
-            await respond(formattedResponse);
-          }
-        });
-      } catch (error) {
-        this.logger.error('Error en comando summary:', error);
-        if (this.app) {
-          await this.app.client.chat.postMessage({
-            channel: command.channel_id,
-            text: "Error al generar el resumen",
+            text: language === 'en' ? 
+              'The Guardian is analyzing your content for summary...' : 
+              'The Guardian está analizando tu contenido para generar un resumen...',
             blocks: [
               {
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: "❌ *Error al generar el resumen.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con un enlace diferente."
+                  text: language === 'en' ? 
+                    '📝 *The Guardian is processing your summary request...*\n\nAnalyzing content and preparing a comprehensive summary.' :
+                    '📝 *The Guardian está procesando tu solicitud de resumen...*\n\nAnalizando contenido y preparando un resumen completo.'
                 }
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: language === 'en' ? 
+                      '💡 _Tip: For best results, use Confluence URLs or upload PDF/Word documents._' :
+                      '💡 _Consejo: Para mejores resultados, usa URLs de Confluence o sube documentos PDF/Word._'
+                  }
+                ]
               }
             ],
             as_user: true
           });
-        } else {
-          await respond({
+          
+          initialMessageTs = initialResponse.ts as string;
+          
+          // Configurar mensajes de espera cada 20 segundos para resúmenes (pueden tomar más tiempo)
+          waitingMessageInterval = setInterval(async () => {
+            if (!processingComplete) {
+              await this.sendWaitingMessage(command.channel_id, command.text || 'contenido', language, initialMessageTs);
+            } else if (waitingMessageInterval) {
+              clearInterval(waitingMessageInterval);
+            }
+          }, 20000);
+        }
+
+        // Intentar obtener archivos adjuntos del comando DIRECTAMENTE (prioridad sobre URLs)
+        let enrichedMessage: Message = {
+          content: parsedCommand.url || command.text || '', // Usar URL parseada si está disponible
+          userId: command.user_id,
+          username: command.user_name,
+          channel: command.channel_id,
+          timestamp: new Date(),
+          type: 'command',
+          metadata: { 
+            command: 'summary',
+            requestedLanguage: parsedCommand.language,
+            hasLanguageParam: parsedCommand.hasLanguageParam,
+            originalText: command.text
+          }
+        };
+
+        // PRIORIDAD 1: Buscar archivos adjuntos directamente en el comando slash
+        try {
+          this.logger.info('Buscando archivos adjuntos en el comando summary (acceso directo)');
+          
+          // Verificar si el comando tiene archivos adjuntos directamente
+          if (command.files && Array.isArray(command.files) && command.files.length > 0) {
+            const file = command.files[0];
+            this.logger.info('Archivo encontrado en comando directo (prioridad alta):', { 
+              id: file.id, 
+              name: file.name, 
+              mimetype: file.mimetype,
+              size: file.size,
+              source: 'command_direct'
+            });
+          
+            // Enriquecer el mensaje con información del archivo
+            enrichedMessage.metadata = {
+              ...enrichedMessage.metadata,
+              slackFiles: [{
+                id: file.id,
+                name: file.name,
+                url_private: file.url_private,
+                permalink: file.permalink,
+                size: file.size,
+                mimetype: file.mimetype
+              }]
+            };
+          } else {
+            // INFORMACIÓN: Los comandos slash no soportan archivos adjuntos
+            this.logger.info('No hay archivos en comando directo (limitación de Slack)');
+            
+            // Si no hay texto tampoco, informar sobre la alternativa
+            if (!parsedCommand.url && (!command.text || !command.text.trim())) {
+              // Detener mensajes de espera
+              processingComplete = true;
+              if (waitingMessageInterval) {
+                clearInterval(waitingMessageInterval);
+              }
+              
+              // Informar sobre la alternativa de usar menciones
+              if (this.app) {
+                await this.app.client.chat.postMessage({
+                  channel: command.channel_id,
+                  text: '📎 **Para resumir archivos adjuntos:**\n\n1. 📤 **Sube tu archivo** al canal\n2. 🏷️ **Menciona al bot:**\n   • `@TG-TheGuardian summary` (English)\n   • `@TG-TheGuardian resume` (English)\n   • `@TG-TheGuardian resumen` (Español)\n\n*Los comandos slash (`/tg-summary`) solo funcionan con URLs.*',
+                  blocks: [
+                    {
+                      type: "section",
+                      text: {
+                        type: "mrkdwn",
+                        text: "📎 **Para resumir archivos adjuntos:**\n\n1. 📤 **Sube tu archivo** al canal\n2. 🏷️ **Menciona al bot:**\n   • `@TG-TheGuardian summary` (English)\n   • `@TG-TheGuardian resume` (English)\n   • `@TG-TheGuardian resumen` (Español)\n\n*Los comandos slash (`/tg-summary`) solo funcionan con URLs.*"
+                      }
+                    },
+                    {
+                      type: "section",
+                      text: {
+                        type: "mrkdwn",
+                        text: "🔗 **Para resumir URLs:**\n\n• `/tg-summary [URL]` (Español por defecto)\n• `/tg-summary [URL] es` (Español explícito)\n• `/tg-summary [URL] en` (Inglés explícito)\n\n💡 **Ejemplos:**\n• `/tg-summary https://confluence.empresa.com/page`\n• `/tg-summary https://confluence.empresa.com/page en`\n• `/tg-summary en https://confluence.empresa.com/page`"
+                      }
+                    },
+                    {
+                      type: "context",
+                      elements: [
+                        {
+                          type: "mrkdwn",
+                          text: "💡 _Tip: Esta es una limitación de Slack - los comandos slash no pueden recibir archivos adjuntos._"
+                        }
+                      ]
+                    }
+                  ],
+                  thread_ts: initialMessageTs,
+                  as_user: true
+                });
+          }
+              return;
+            }
+            
+            // COMANDO SLASH: Solo procesar URLs, NO buscar archivos en historial
+            this.logger.info('Comando slash: Solo procesando URLs, no buscando archivos en historial');
+          }
+        } catch (fileError) {
+          this.logger.warn('No se pudieron obtener archivos:', fileError);
+          // Continuar sin archivos - la validación manejará este caso
+        }
+
+        // Validar usando el nuevo SummaryCommand
+        const summaryCommand = this.getSummaryCommand();
+        const validation: SummaryValidationResult = await summaryCommand.validate(enrichedMessage);
+        
+        if (!validation.isValid) {
+          // Detener mensajes de espera
+          processingComplete = true;
+          if (waitingMessageInterval) {
+            clearInterval(waitingMessageInterval);
+          }
+          
+          // Enviar mensaje de error de validación
+        if (this.app) {
+          await this.app.client.chat.postMessage({
+            channel: command.channel_id,
+              text: validation.error || 'Error de validación',
             blocks: [
               {
                 type: "section",
                 text: {
                   type: "mrkdwn",
-                  text: "❌ *Error al generar el resumen.* Ha ocurrido un problema al comunicarse con Slack. Por favor, inténtalo de nuevo o con un enlace diferente."
+                    text: validation.error || 'Error de validación desconocido'
                 }
               }
-            ]
+            ],
+              thread_ts: initialMessageTs,
+            as_user: true
+          });
+          }
+          return;
+        }
+
+        // Actualizar mensaje inicial con información específica sobre lo que se está procesando
+        if (this.app && initialMessageTs) {
+          let processingInfo = '';
+          let contentInfo = '';
+          
+          if (validation.type === 'file_attachment') {
+            // PRIORIDAD: Mostrar información del archivo adjunto
+            const fileName = validation.fileInfo?.name || 'archivo';
+            const fileSize = validation.fileInfo?.size ? 
+              ` (${(validation.fileInfo.size / (1024 * 1024)).toFixed(2)}MB)` : '';
+            const fileType = validation.fileInfo?.mimetype || 'tipo desconocido';
+            
+            processingInfo = language === 'en' ? 
+              `📎 *Processing attached document for summary...*` :
+              `📎 *Procesando documento adjunto para resumen...*`;
+            
+            contentInfo = `> 📄 **Archivo detectado:** "${fileName}"${fileSize}\n> 🔍 **Tipo:** ${fileType}`;
+            
+            // Si había texto adicional, mostrarlo también
+            if (command.text && command.text.trim()) {
+              contentInfo += `\n> 💬 **Texto adicional:** "${command.text.trim()}"`;
+            }
+            
+          } else if (validation.type === 'url') {
+            const isConfluence = validation.metadata?.isConfluence;
+            const urlType = isConfluence ? 'Confluence' : 'Web';
+            
+            processingInfo = language === 'en' ? 
+              `📄 *Processing ${urlType} URL for summary...*` :
+              `📄 *Procesando URL de ${urlType} para resumen...*`;
+            
+            // Mostrar la URL que se va a procesar
+            const urlToShow = validation.content || '';
+            contentInfo = `> 🔗 **URL detectada:** ${urlToShow}`;
+            
+            // Si la URL original era diferente (hipervínculo), mostrar ambas
+            if (command.text && command.text !== urlToShow) {
+              contentInfo += `\n> 📝 **Texto original:** "${command.text}"`;
+            }
+          }
+
+          await this.app.client.chat.update({
+            channel: command.channel_id,
+            ts: initialMessageTs,
+            text: processingInfo,
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `👁️👁️👁️ ${processingInfo}\n\n${contentInfo}\n\n_${language === 'en' ? 
+                    '✅ Input validated successfully. Ready to process...' :
+                    '✅ Entrada validada exitosamente. Listo para procesar...'}_`
+                }
+              },
+              {
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: language === 'en' ? 
+                      '💡 _Tip: Files have priority over URLs. Upload documents for best results._' :
+                      '💡 _Consejo: Los archivos tienen prioridad sobre URLs. Sube documentos para mejores resultados._'
+                  }
+                ]
+              }
+            ],
+            as_user: true
+          });
+        }
+
+        // Crear solicitud de resumen basada en la validación
+        let summaryRequest: SummaryRequest;
+        
+        if (validation.type === 'file_attachment' && validation.fileInfo) {
+          // Para archivos adjuntos, necesitamos descargar el archivo de Slack
+          try {
+            this.logger.info('Descargando archivo de Slack:', {
+              fileName: validation.fileInfo.name,
+              fileSize: validation.fileInfo.size,
+              url: validation.fileInfo.url
+            });
+
+            // Descargar el archivo desde Slack
+            const fileBuffer = await this.downloadSlackFile(validation.fileInfo.url);
+            
+            summaryRequest = {
+              type: 'pdf_buffer',
+              content: fileBuffer,
+              metadata: {
+                userId: command.user_id,
+                channel: command.channel_id,
+                fileName: validation.fileInfo.name,
+                fileSize: validation.fileInfo.size
+              }
+            };
+          } catch (downloadError) {
+            this.logger.error('Error descargando archivo de Slack:', downloadError);
+            throw new Error(`No se pudo descargar el archivo: ${downloadError instanceof Error ? downloadError.message : 'Error desconocido'}`);
+          }
+        } else {
+          // Para URLs normales
+          summaryRequest = {
+            type: 'url',
+            content: validation.content || command.text || '',
+            metadata: {
+              userId: command.user_id,
+              channel: command.channel_id
+            }
+          };
+        }
+
+        // Procesar el resumen
+        const summaryUseCase = this.getProcessSummaryUseCase();
+        const botResponse = await summaryUseCase.execute(enrichedMessage, summaryRequest, {
+          maxLength: 500,
+          language: language === 'en' ? 'en' : 'es',
+          includeMetadata: true,
+          format: 'structured'
+        });
+
+        // Detener mensajes de espera
+        processingComplete = true;
+        if (waitingMessageInterval) {
+          clearInterval(waitingMessageInterval);
+        }
+
+        // Enviar respuesta final
+        if (this.app) {
+          const formattedResponse = this.formatResponse(botResponse);
+          await this.app.client.chat.postMessage({
+            channel: command.channel_id,
+            text: botResponse.content,
+            blocks: formattedResponse.blocks,
+            thread_ts: initialMessageTs,
+            as_user: true
+          });
+        }
+      } catch (error) {
+        // Detener mensajes de espera
+        processingComplete = true;
+        if (waitingMessageInterval) {
+          clearInterval(waitingMessageInterval);
+        }
+        
+        this.logger.error('Error en comando summary:', error);
+        
+        const errorMessage = language === 'en' ?
+          '❌ *Error generating summary.* There was a problem processing your content. Please try again with a different URL or file.' :
+          '❌ *Error al generar el resumen.* Hubo un problema al procesar tu contenido. Por favor, inténtalo de nuevo con una URL o archivo diferente.';
+        
+        if (this.app) {
+          await this.app.client.chat.postMessage({
+            channel: command.channel_id,
+            text: errorMessage,
+            blocks: [
+              {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: errorMessage
+                }
+              }
+            ],
+            thread_ts: initialMessageTs,
+            as_user: true
           });
         }
       }
@@ -592,15 +1157,49 @@ export class SlackAdapter implements MessagePort {
           break;
 
         case '/tg-summary':
-          // Respuesta temporal mientras se procesa (restaurando la funcionalidad original)
+          try {
+            // Determinar el tipo de contenido y crear la solicitud de resumen
+            const summaryRequest: SummaryRequest = {
+              type: 'url', // Por ahora solo URLs, PDFs vendrán después
+              content: command.text,
+              metadata: {
+                userId: command.user_id,
+                channel: command.channel_id
+              }
+            };
+
+            // Crear mensaje temporal para el caso de uso
+            const tempMessage: Message = {
+              content: command.text,
+              userId: command.user_id,
+              username: command.user_name,
+              channel: command.channel_id,
+              timestamp: new Date(),
+              type: 'command',
+              metadata: { command: 'summary' }
+            };
+
+            // Procesar el resumen usando el nuevo caso de uso
+            const summaryUseCase = this.getProcessSummaryUseCase();
+            response = await summaryUseCase.execute(tempMessage, summaryRequest, {
+              maxLength: 500,
+              language: 'es',
+              includeMetadata: true,
+              format: 'structured'
+            });
+
+          } catch (error) {
+            this.logger.error('Error procesando resumen:', error);
           response = {
-            content: `📝 *Solicitud de Resumen:* "${message.content}"\n\nGenerando resumen del documento...\n• Documento: ${message.content}\n• Tipo: ${message.content.endsWith('.pdf') ? 'PDF' : 'Link'}\n• Solicitado por: ${message.username}\n• Canal: <#${message.channel}>`,
+              content: `❌ *Error al generar resumen*\n\n${error instanceof Error ? error.message : 'Error desconocido al procesar el documento.'}`,
             type: 'text',
             metadata: {
-              source: 'Generador de resúmenes',
-              confidence: 0.85
+                source: 'Sistema de resúmenes',
+                confidence: 0,
+                error: true
             }
           };
+          }
           break;
 
         default:
@@ -852,6 +1451,78 @@ export class SlackAdapter implements MessagePort {
     return "*¡Hola! He encontrado esta información para tu pregunta:*\n\n";
   }
 
+  // Método para validar si una cadena es una URL válida
+  private isValidUrl(text: string): boolean {
+    try {
+      const url = new URL(text);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  // Método para parsear comandos de resumen con parámetros de idioma
+  private parseSummaryCommand(commandText: string): ParsedSummaryCommand {
+    const parts = commandText.trim().split(/\s+/).filter(part => part.length > 0);
+    
+    // Palabras clave de idioma
+    const languageKeywords = {
+      'es': ['es', 'español', 'spanish', 'spa'],
+      'en': ['en', 'english', 'inglés', 'ing', 'eng']
+    };
+    
+    let detectedLanguage: 'es' | 'en' = 'es'; // Default español
+    let urlPart = '';
+    let hasLanguageParam = false;
+    
+    // Buscar idioma y URL en los parámetros
+    for (const part of parts) {
+      const lowerPart = part.toLowerCase();
+      
+      // Verificar si es un parámetro de idioma
+      if (languageKeywords.es.includes(lowerPart)) {
+        detectedLanguage = 'es';
+        hasLanguageParam = true;
+      } else if (languageKeywords.en.includes(lowerPart)) {
+        detectedLanguage = 'en';
+        hasLanguageParam = true;
+      } else if (this.isValidUrl(part)) {
+        urlPart = part;
+      } else if (part.startsWith('<') && part.endsWith('>')) {
+        // Manejar URLs en formato Slack <URL|texto> o <URL>
+        const urlMatch = part.match(/^<([^|>]+)/);
+        if (urlMatch && this.isValidUrl(urlMatch[1])) {
+          urlPart = urlMatch[1];
+        }
+      }
+    }
+    
+    // Si no se encontró URL válida, intentar extraer de texto completo
+    if (!urlPart) {
+      // Buscar URLs en el texto completo
+      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      const urlMatch = commandText.match(urlRegex);
+      if (urlMatch && urlMatch[0]) {
+        urlPart = urlMatch[0];
+      }
+    }
+    
+    this.logger.info('Comando de resumen parseado:', {
+      originalText: commandText,
+      detectedLanguage,
+      hasLanguageParam,
+      extractedUrl: urlPart,
+      parts
+    });
+    
+    return {
+      url: urlPart,
+      language: detectedLanguage,
+      originalText: commandText,
+      hasLanguageParam
+    };
+  }
+
   // Método para manejar mensajes de espera
   private async sendWaitingMessage(channelId: string, originalQuestion: string, language: string = 'es', messageTs?: string): Promise<string | undefined> {
     try {
@@ -894,5 +1565,79 @@ export class SlackAdapter implements MessagePort {
       this.logger.error('Error enviando mensaje de espera:', error);
       return undefined;
     }
+  }
+
+  private async downloadSlackFile(url: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const https = require('https');
+      const http = require('http');
+      
+      // Determinar el cliente HTTP apropiado
+      const client = url.startsWith('https:') ? https : http;
+      
+      // Configurar headers con el token de autenticación
+      const options = {
+        headers: {
+          'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          'User-Agent': 'TG-TheGuardian-Bot/1.0'
+        }
+      };
+
+      const request = client.get(url, options, (response: any) => {
+        // Manejar redirecciones
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          const redirectUrl = response.headers.location;
+          if (redirectUrl) {
+            this.logger.info('Siguiendo redirección de archivo de Slack:', redirectUrl);
+            // Recursivamente seguir la redirección
+            this.downloadSlackFile(redirectUrl).then(resolve).catch(reject);
+            return;
+          }
+        }
+
+        if (response.statusCode !== 200) {
+          reject(new Error(`Error descargando archivo de Slack: HTTP ${response.statusCode}`));
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let totalSize = 0;
+        const maxSize = 50 * 1024 * 1024; // 50MB límite
+
+        response.on('data', (chunk: Buffer) => {
+          totalSize += chunk.length;
+          
+          if (totalSize > maxSize) {
+            request.destroy();
+            reject(new Error('El archivo es demasiado grande (máximo 50MB)'));
+            return;
+          }
+          
+          chunks.push(chunk);
+        });
+
+        response.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          this.logger.info('Archivo descargado exitosamente:', {
+            size: buffer.length,
+            sizeInMB: (buffer.length / (1024 * 1024)).toFixed(2)
+          });
+          resolve(buffer);
+        });
+
+        response.on('error', (error: Error) => {
+          reject(new Error(`Error en la respuesta: ${error.message}`));
+        });
+      });
+
+      request.on('error', (error: Error) => {
+        reject(new Error(`Error de conexión: ${error.message}`));
+      });
+
+      request.setTimeout(30000, () => {
+        request.destroy();
+        reject(new Error('Timeout descargando archivo (30s)'));
+      });
+    });
   }
 } 

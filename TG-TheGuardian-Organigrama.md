@@ -136,10 +136,10 @@ Etapa 2
   permitiendo procesar tanto enlaces de Confluence como archivos PDF,
   y generando resúmenes concisos y relevantes.
 * Objetivos:
-- ( ) Implementar comando /tg-summary
-- ( ) Crear sistema de procesamiento de PDFs
-- ( ) Implementar extracción de contenido de Confluence
-- ( ) Desarrollar algoritmo de generación de resúmenes
+- (✅) Implementar comando /tg-summary
+- (✅) Crear sistema de procesamiento de PDFs
+- (✅) Implementar extracción de contenido de Confluence
+- (✅) Desarrollar algoritmo de generación de resúmenes
 
 * Lunes 12 de Mayo, 2025
 * Semana #4
@@ -151,10 +151,10 @@ Etapa 2
   comando implementado, asegurando su correcto funcionamiento y
   manejando diferentes casos de uso y escenarios de error.
 * Objetivos:
-- ( ) Implementar tests unitarios para /tg-search
-- ( ) Implementar tests unitarios para /tg-question
-- ( ) Implementar tests unitarios para /tg-summary
-- ( ) Documentar resultados de pruebas
+- (✅) Implementar tests unitarios para /tg-search
+- (✅) Implementar tests unitarios para /tg-question
+- (✅) Implementar tests unitarios para /tg-summary
+- (✅) Documentar resultados de pruebas
 
 * Martes 13 de Mayo, 2025
 * Semana #4
@@ -166,10 +166,10 @@ Etapa 2
   incluyendo diagramas de arquitectura, flujos de datos y
   especificaciones de cada comando implementado.
 * Objetivos:
-- ( ) Documentar APIs y endpoints
-- ( ) Crear guías de uso de comandos actualizados
-- ( ) Documentar flujos principales
-- ( ) Preparar documentación de arquitectura
+- (✅) Documentar APIs y endpoints
+- (✅) Crear guías de uso de comandos actualizados
+- (✅) Documentar flujos principales
+- (✅) Preparar documentación de arquitectura
 
 * Miércoles 14 de Mayo, 2025
 * Semana #4
@@ -181,10 +181,10 @@ Etapa 2
   realizar revisiones de calidad y asegurar que toda la información
   esté actualizada y sea precisa.
 * Objetivos:
-- ( ) Finalizar documentación técnica
-- ( ) Crear diagramas de arquitectura
-- ( ) Documentar configuraciones y variables
-- ( ) Review final de documentación
+- (✅) Finalizar documentación técnica
+- (✅) Crear diagramas de arquitectura
+- (✅) Documentar configuraciones y variables
+- (✅) Review final de documentación
 
 ---
 Etapa 3
@@ -199,10 +199,10 @@ Etapa 3
   implementando un sistema de indexación eficiente y asegurando
   la correcta recuperación y procesamiento de documentos.
 * Objetivos:
-- ( ) Implementar integración con Confluence
-- ( ) Crear sistema de indexación de documentos
-- ( ) Implementar búsqueda avanzada
-- ( ) Pruebas de integración con Confluence
+- (✅) Implementar integración con Confluence
+- (✅) Crear sistema de indexación de documentos
+- (✅) Implementar búsqueda avanzada
+- (✅) Pruebas de integración con Confluence
 
 * Martes 20 de Mayo, 2025
 * Semana #5
@@ -214,10 +214,10 @@ Etapa 3
   refinando los prompts del LLM y estableciendo un sistema de
   retroalimentación para mejorar la precisión de las respuestas.
 * Objetivos:
-- ( ) Implementar sistema de resúmenes avanzado
-- ( ) Optimizar prompts de LLM
+- (✅) Implementar sistema de resúmenes avanzado
+- (✅) Optimizar prompts de LLM
 - ( ) Crear sistema de feedback
-- ( ) Pruebas de generación de resúmenes
+- (✅) Pruebas de generación de resúmenes
 
 * Miércoles 21 de Mayo, 2025
 * Semana #5
@@ -229,9 +229,9 @@ Etapa 3
   implementando estrategias de caché eficientes y optimizando
   el tiempo de respuesta de los comandos.
 * Objetivos:
-- ( ) Implementar sistema de caché avanzado
-- ( ) Optimizar búsquedas frecuentes
-- ( ) Mejorar formato de respuestas
+- (✅) Implementar sistema de caché avanzado
+- (✅) Optimizar búsquedas frecuentes
+- (✅) Mejorar formato de respuestas
 - ( ) Pruebas de rendimiento
 
 * Lunes 26 de Mayo, 2025
@@ -244,9 +244,9 @@ Etapa 3
   que permita identificar y resolver problemas rápidamente,
   mejorando la capacidad de mantenimiento del sistema.
 * Objetivos:
-- ( ) Implementar logging avanzado
+- (✅) Implementar logging avanzado
 - ( ) Crear sistema de métricas
-- ( ) Optimizar manejo de errores
+- (✅) Optimizar manejo de errores
 - ( ) Pruebas de robustez
 
 * Martes 27 de Mayo, 2025
@@ -261,7 +261,7 @@ Etapa 3
 * Objetivos:
 - ( ) Implementar rate limiting
 - ( ) Mejorar seguridad general
-- ( ) Optimizar consumo de recursos
+- (✅) Optimizar consumo de recursos
 - ( ) Pruebas de carga
 
 * Miércoles 28 de Mayo, 2025
@@ -274,10 +274,10 @@ Etapa 3
   documentando el estado actual y preparando mecanismos
   de recuperación automática ante posibles fallos.
 * Objetivos:
-- ( ) Review general de funcionalidades
-- ( ) Preparar para ausencia (1-7 Junio)
-- ( ) Documentar estado actual
-- ( ) Backup completo del proyecto
+- (✅) Review general de funcionalidades
+- (✅) Preparar para ausencia (1-7 Junio)
+- (✅) Documentar estado actual
+- (✅) Backup completo del proyecto
 
 ---
 Etapa 4
@@ -287,75 +287,75 @@ Etapa 4
 * Horas: 4
 * Milestone: Proyecto Final
 * Objetivo General:
-  Inicio de la fase final de testing y depuración.
-  Este día se centra en realizar pruebas exhaustivas del sistema,
-  identificando y priorizando la corrección de bugs críticos,
-  asegurando la estabilidad general de la aplicación.
+  Implementación de sistema OAuth para autenticación individual de usuarios.
+  Este día se centra en desarrollar un sistema de autenticación empresarial
+  que permita a cada usuario acceder a Confluence con sus propias credenciales,
+  respetando los permisos individuales y mejorando la seguridad del sistema.
 * Objetivos:
-- ( ) Testing general del sistema
-- ( ) Identificar bugs críticos
-- ( ) Crear plan de correcciones
-- ( ) Iniciar correcciones prioritarias
+- ( ) Implementar OAuth 2.0 para Confluence
+- ( ) Crear UserConfluenceAdapter para tokens individuales
+- ( ) Desarrollar flujo de autorización en Slack
+- ( ) Implementar endpoint de callback OAuth
 
 * Martes 10 de Junio, 2025
 * Semana #7
 * Horas: 4
 * Milestone: Proyecto Final
 * Objetivo General:
-  Continuación de correcciones y optimizaciones finales.
-  Este día se dedica a resolver los problemas identificados,
-  mejorando el rendimiento general del sistema y
-  asegurando una experiencia de usuario óptima.
+  Desarrollo del sistema RAG (Retrieval-Augmented Generation) base.
+  Este día se dedica a implementar la arquitectura fundamental del sistema RAG,
+  incluyendo el modelo codificador para vectorización de documentos y
+  la base de datos vectorial para búsqueda semántica avanzada.
 * Objetivos:
-- ( ) Continuar correcciones de bugs
-- ( ) Optimizar rendimiento general
-- ( ) Mejorar mensajes de error
-- ( ) Pruebas de integración final
+- ( ) Implementar modelo codificador (sentence-transformers)
+- ( ) Crear base de datos vectorial (Chroma/Pinecone)
+- ( ) Desarrollar sistema de embeddings de documentos
+- ( ) Implementar búsqueda semántica por similitud
 
 * Miércoles 11 de Junio, 2025
 * Semana #7
 * Horas: 4
 * Milestone: Proyecto Final
 * Objetivo General:
-  Finalización de correcciones y preparación de demo.
-  Este día se enfoca en completar todas las correcciones críticas,
-  actualizar la documentación con los cambios realizados y
-  preparar una demostración completa del sistema.
+  Integración del sistema RAG con comandos existentes.
+  Este día se enfoca en integrar el sistema RAG con los comandos
+  /tg-question y /tg-summary, mejorando significativamente la calidad
+  de las respuestas mediante recuperación contextual inteligente.
 * Objetivos:
-- ( ) Finalizar correcciones críticas
-- ( ) Documentar cambios realizados
-- ( ) Actualizar guías de usuario
-- ( ) Preparar demo del sistema
+- ( ) Integrar RAG con comando /tg-question
+- ( ) Integrar RAG con comando /tg-summary
+- ( ) Implementar ranking de relevancia contextual
+- ( ) Crear sistema de contexto dinámico expandido
 
 * Lunes 15 de Junio, 2025
 * Semana #8
 * Horas: 4
 * Milestone: Proyecto Final
 * Objetivo General:
-  Revisión final del código y documentación.
-  Este día se dedica a realizar una revisión exhaustiva
-  del código y la documentación, asegurando que todo
-  esté listo para la entrega final del proyecto.
+  Testing integral de sistemas avanzados y optimización.
+  Este día se dedica a realizar pruebas exhaustivas del OAuth y RAG,
+  identificando y corrigiendo problemas de rendimiento y seguridad,
+  asegurando la estabilidad de las nuevas funcionalidades.
 * Objetivos:
-- ( ) Review final del código
-- ( ) Últimos ajustes y optimizaciones
-- ( ) Preparar documentación de entrega
-- ( ) Verificar requisitos de entrega
+- ( ) Testing del sistema OAuth completo
+- ( ) Testing del sistema RAG y precisión de respuestas
+- ( ) Optimización de rendimiento vectorial
+- ( ) Pruebas de seguridad y permisos
 
 * Martes 16 de Junio, 2025
 * Semana #8
 * Horas: 4
 * Milestone: Proyecto Final
 * Objetivo General:
-  Entrega final del proyecto y cierre del desarrollo.
-  Este último día se centra en completar la entrega final,
-  asegurando que toda la documentación esté actualizada y
-  realizando los respaldos necesarios del proyecto.
+  Documentación avanzada y entrega final del proyecto.
+  Este día se centra en documentar las nuevas funcionalidades avanzadas,
+  crear guías de implementación empresarial y realizar la entrega final
+  con un sistema de nivel empresarial completo.
 * Objetivos:
-- ( ) Entrega final del proyecto
-- ( ) Verificación final de documentación
-- ( ) Backup final del proyecto
-- ( ) Cierre del desarrollo
+- ( ) Documentar sistema OAuth y guías de configuración
+- ( ) Documentar arquitectura RAG y modelos utilizados
+- ( ) Crear guía de deployment empresarial
+- ( ) Entrega final con demo de funcionalidades avanzadas
 
 ### Tabla Resumen del Proyecto
 
@@ -369,8 +369,8 @@ Etapa 4
 | Código Funcional 		| 19-21 Mayo, 2025 	| 3 - Integraciones 	| Alta 		| • Integrar Confluence<br>• Implementar resúmenes avanzados<br>• Sistema de feedback |
 | Código Funcional 		| 26-28 Mayo, 2025 	| 3 - Integraciones 	| Media 	| • Implementar métricas<br>• Optimizar rendimiento<br>• Preparar para ausencia |
 | 🛫 VIAJE 				| 1-7 Junio, 2025 	| - 					| - 		| Viaje a USA 			|
-| Proyecto Final 		| 9-11 Junio, 2025 	| 4 - Testing 			| Alta 		| • Testing general<br>• Corrección de bugs<br>• Documentación de cambios |
-| Proyecto Final 		| 15-16 Junio, 2025 	| 4 - Testing 			| Alta 		| • Review final<br>• Últimos ajustes<br>• Entrega final |
+| Proyecto Final 		| 9-11 Junio, 2025 	| 4 - Funcionalidades Avanzadas | Alta 		| • Implementar OAuth 2.0 para autenticación individual<br>• Desarrollar sistema RAG (Retrieval-Augmented Generation)<br>• Integrar RAG con comandos existentes |
+| Proyecto Final 		| 15-16 Junio, 2025 	| 4 - Funcionalidades Avanzadas | Alta 		| • Testing integral de OAuth y RAG<br>• Documentación empresarial avanzada<br>• Entrega final con funcionalidades enterprise |
 
 ### Fechas Clave
 

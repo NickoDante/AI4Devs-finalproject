@@ -260,9 +260,9 @@ Etapa 3
   mientras se optimiza el consumo de recursos.
 * Objetivos:
 - (✅) Implementar rate limiting
-- ( ) Mejorar seguridad general
+- (✅) Mejorar seguridad general
 - (✅) Optimizar consumo de recursos
-- ( ) Pruebas de carga
+- (✅) Pruebas de carga
 
 * Miércoles 28 de Mayo, 2025
 * Semana #6

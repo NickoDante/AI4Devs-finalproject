@@ -33,7 +33,11 @@
     "test:performance:unit": "jest commands.performance.test.ts",
     "test:feedback": "jest feedback.test.ts",
     "test:metrics": "npx ts-node src/tests/quick-metrics-ratelimit-test.ts",
-    "test:systems": "npm run test:performance && npm run test:metrics"
+    "test:systems": "npm run test:performance && npm run test:metrics",
+    "test:security": "npx ts-node src/tests/security-load-integration.test.ts",
+    "test:load": "npx ts-node src/tests/load/LoadTestRunner.ts",
+    "test:security-load": "npx ts-node src/tests/security-load-integration.test.ts",
+    "test:all": "npm run test:systems && npm run test:security-load"
   },
   "dependencies": {
     "@slack/bolt": "^3.17.1",

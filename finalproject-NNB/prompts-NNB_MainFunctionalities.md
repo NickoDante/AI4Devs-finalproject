@@ -4,7 +4,7 @@ Este directorio contiene todos los prompts utilizados durante el desarrollo de l
 
 ## 📋 Menú de Funcionalidades
 
-### 🔍 [TG-SEARCH: Búsqueda de Documentos](./tg-search_prompts.md)
+### 🔍 [TG-SEARCH: Búsqueda de Documentos](./MainFunctionalities/tg-search_prompts.md)
 **Comando:** `/tg-search [palabras clave] -- [espacio]`
 
 Funcionalidad que permite buscar documentación en Confluence usando palabras clave. Los usuarios pueden buscar en espacios específicos o usar el espacio por defecto (TKA).
@@ -17,7 +17,7 @@ Funcionalidad que permite buscar documentación en Confluence usando palabras cl
 
 ---
 
-### ❓ [TG-QUESTION: Preguntas Inteligentes](./tg-question_prompts.md)
+### ❓ [TG-QUESTION: Preguntas Inteligentes](./MainFunctionalities/tg-question_prompts.md)
 **Comando:** `/tg-question [pregunta en lenguaje natural]`
 
 Funcionalidad que permite realizar consultas en lenguaje natural al chatbot, con soporte bilingüe y contexto conversacional.
@@ -30,7 +30,7 @@ Funcionalidad que permite realizar consultas en lenguaje natural al chatbot, con
 
 ---
 
-### 📄 [TG-SUMMARY: Resúmenes de Documentos](./tg-summary_prompts.md)
+### 📄 [TG-SUMMARY: Resúmenes de Documentos](./MainFunctionalities/tg-summary_prompts.md)
 **Comandos:** `/tg-summary [URL]` y `@TG-TheGuardian resumen/summary`
 
 Funcionalidad dual que permite resumir tanto URLs de Confluence como archivos adjuntos (PDFs, Word, TXT).
@@ -40,5 +40,13 @@ Funcionalidad dual que permite resumir tanto URLs de Confluence como archivos ad
 - Soporte para múltiples formatos (PDF, Word, TXT, HTML)
 - Resúmenes en español e inglés
 - Integración con API de Confluence para contenido privado
+
+---
+
+---
+
+### [Improvements](./Improvements/tg-improvements.md)
+
+Mejoras en el proceso del comando de "summary".
 
 ---

@@ -43,6 +43,7 @@ export class SlackAdapter implements MessagePort {
   private summaryCommand: SummaryCommand | null = null;
   private aiAdapter: AIAdapter | null = null;
   private knowledgePort: KnowledgePort | null = null;
+  private readonly MAX_BLOCK_LENGTH = 2900; // Límite seguro para bloques de texto
 
   // Agregar estos mensajes de espera aleatorios al inicio de la clase SlackAdapter
   private waitingMessages: Record<string, string[]> = {
@@ -614,8 +615,9 @@ export class SlackAdapter implements MessagePort {
               type: 'text',
               metadata: {
                 source: 'Sistema',
-                confidence: 0,
-                hasError: true
+                confidence: 0.0,
+                error: true,
+                message: String(error)
               }
             };
           }
@@ -1366,67 +1368,59 @@ export class SlackAdapter implements MessagePort {
     }
   }
 
-  private formatResponse(response: BotResponse): any {
-    const blocks = [];
-
-    // Agregar el contenido principal
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: response.content
-      }
-    });
-
-    // Verificar si la respuesta proviene de una mención del bot (mention)
-    const isMention = response.metadata?.messageType === 'mention';
+  private formatResponse(response: BotResponse): { blocks: any[], thread_ts?: string } {
+    const blocks: any[] = [];
     
-    // Verificar si hay metadatos y si debe mostrar información adicional
-    const hasMetadata = response.metadata !== undefined && Object.keys(response.metadata || {}).length > 0;
-    const hasSearchResults = hasMetadata && response.metadata?.confidence !== undefined && response.metadata?.confidence > 0;
-    const hasEmptyResults = hasMetadata && response.metadata?.emptyResults === true;
-
-    // Solo mostrar fuente y confianza cuando hay resultados reales (no vacíos)
-    if (hasMetadata && !hasEmptyResults && response.metadata?.source && !isMention && hasSearchResults) {
+    // Si el contenido es muy largo, dividirlo en bloques más pequeños
+    const contentChunks = this.splitLongMessage(response.content);
+    
+    // Agregar cada chunk como un bloque separado
+    for (let i = 0; i < contentChunks.length; i++) {
       blocks.push({
-        type: 'context',
-        elements: [{
-          type: 'mrkdwn',
-          text: `📚 Fuente: ${response.metadata.source}`
-        }]
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: contentChunks[i]
+        }
       });
+      
+      // Si no es el último chunk, agregar un divisor
+      if (i < contentChunks.length - 1) {
+        blocks.push({
+          type: "divider"
+        });
+      }
     }
-
-    // Solo mostrar confianza cuando hay resultados reales (no vacíos)
-    if (hasMetadata && !hasEmptyResults && response.metadata?.confidence !== undefined && !isMention && hasSearchResults) {
-      blocks.push({
-        type: 'context',
-        elements: [{
-          type: 'mrkdwn',
-          text: `🎯 Confianza: ${Math.round(response.metadata.confidence * 100)}%`
-        }]
-      });
+    
+    // Agregar metadatos si están disponibles
+    if (response.metadata) {
+      // Agregar fuente si está disponible
+      if (response.metadata.source) {
+        blocks.push({
+          type: "context",
+          elements: [{
+            type: "mrkdwn",
+            text: `📚 Fuente: ${response.metadata.source}`
+          }]
+        });
+      }
+      
+      // Agregar confianza si está disponible
+      if (response.metadata.confidence) {
+        blocks.push({
+          type: "context",
+          elements: [{
+            type: "mrkdwn",
+            text: `🎯 Confianza: ${Math.round(response.metadata.confidence * 100)}%`
+          }]
+        });
+      }
     }
-
-    // Cuando no hay resultados, agregar un bloque adicional para mantener consistencia en formato
-    if (hasEmptyResults) {
-      blocks.push({
-        type: 'context',
-        elements: [{
-          type: 'mrkdwn',
-          text: `ℹ️ _Prueba con otros términos de búsqueda para encontrar lo que necesitas._`
-        }]
-      });
-    }
-
-    // Configuración para enviar a Slack
-    const responseConfig: any = {
+    
+    return { 
       blocks,
-      thread_ts: response.threadId,
-      text: response.content // Texto alternativo para notificaciones
+      thread_ts: response.threadId
     };
-
-    return responseConfig;
   }
 
   async processMessage(message: Message): Promise<BotResponse> {
@@ -1473,16 +1467,140 @@ export class SlackAdapter implements MessagePort {
     }
   }
 
-  async sendMessage(channel: string, text: string): Promise<void> {
+  /**
+   * Divide un mensaje largo en partes más pequeñas
+   */
+  private splitLongMessage(text: string, maxLength: number = 2900): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+    
+    // Dividir por párrafos primero
+    const paragraphs = text.split('\n\n');
+    
+    for (const paragraph of paragraphs) {
+      // Si el párrafo por sí solo excede el límite, dividirlo por líneas
+      if (paragraph.length > maxLength) {
+        const lines = paragraph.split('\n');
+        for (const line of lines) {
+          // Si la línea es muy larga, dividirla en fragmentos
+          if (line.length > maxLength) {
+            let i = 0;
+            while (i < line.length) {
+              const chunk = line.slice(i, i + maxLength);
+              if (currentChunk.length + chunk.length + 1 > maxLength) {
+                chunks.push(currentChunk);
+                currentChunk = chunk;
+              } else {
+                currentChunk += (currentChunk ? '\n' : '') + chunk;
+              }
+              i += maxLength;
+            }
+          } else {
+            // Agregar la línea si cabe en el chunk actual
+            if (currentChunk.length + line.length + 1 > maxLength) {
+              chunks.push(currentChunk);
+              currentChunk = line;
+            } else {
+              currentChunk += (currentChunk ? '\n' : '') + line;
+            }
+          }
+        }
+      } else {
+        // Agregar el párrafo si cabe en el chunk actual
+        if (currentChunk.length + paragraph.length + 2 > maxLength) {
+          chunks.push(currentChunk);
+          currentChunk = paragraph;
+        } else {
+          currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+        }
+      }
+    }
+    
+    // Agregar el último chunk si no está vacío
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+    
+    return chunks;
+  }
+
+  /**
+   * Envía un mensaje largo dividiéndolo en partes si es necesario
+   */
+  private async sendLongMessage(channel: string, text: string, threadTs?: string): Promise<void> {
     this.assertAppInitialized();
     try {
-      await this.app!.client.chat.postMessage({
-        channel,
-        text,
-        as_user: true
-      });
+      const parts = this.splitLongMessage(text);
+      const totalParts = parts.length;
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const isFirstPart = i === 0;
+        const isLastPart = i === parts.length - 1;
+
+        // Agregar indicadores de parte si hay múltiples partes
+        let messageText = part;
+        if (totalParts > 1) {
+          messageText = `${isFirstPart ? '📝 ' : ''}${messageText}${isLastPart ? '' : ' ...'}\n${isLastPart ? '' : `(Parte ${i + 1}/${totalParts})`}`;
+        }
+
+        const response = await this.app!.client.chat.postMessage({
+          channel,
+          text: messageText,
+          thread_ts: threadTs,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: messageText
+              }
+            }
+          ]
+        });
+
+        // Si es la primera parte, usar su ts como thread_ts para las siguientes partes
+        if (isFirstPart && !threadTs) {
+          threadTs = response.ts;
+        }
+
+        // Pequeña pausa entre mensajes para mantener el orden
+        if (!isLastPart) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
+      this.logger.error('Error al enviar mensaje largo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Envía un mensaje a Slack
+   */
+  async sendMessage(channel: string, message: string, threadTs?: string): Promise<void> {
+    this.assertAppInitialized();
+    try {
+      if (message.length > this.MAX_BLOCK_LENGTH) {
+        await this.sendLongMessage(channel, message, threadTs);
+      } else {
+        await this.app!.client.chat.postMessage({
+          channel,
+          text: message,
+          thread_ts: threadTs,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: message
+              }
+            }
+          ]
+        });
+      }
+    } catch (error) {
+      this.logger.error('Error al enviar mensaje:', error);
       throw error;
     }
   }

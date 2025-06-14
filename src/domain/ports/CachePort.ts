@@ -102,4 +102,38 @@ export interface CachePort {
      * Obtiene las conversaciones activas de un usuario
      */
     getActiveConversations(userId: string): Promise<string[]>;
+
+    /**
+     * Guarda un vector en la base de datos vectorial
+     * @param key Identificador único del vector
+     * @param vector Array de números que representa el vector
+     * @param metadata Metadatos asociados al vector
+     */
+    storeVector(key: string, vector: number[], metadata?: Record<string, any>): Promise<void>;
+
+    /**
+     * Busca los vectores más similares a un vector dado
+     * @param vector Vector de consulta
+     * @param limit Número máximo de resultados
+     * @param threshold Umbral mínimo de similitud (0-1)
+     * @returns Array de resultados ordenados por similitud
+     */
+    searchSimilarVectors(vector: number[], limit?: number, threshold?: number): Promise<Array<{
+        key: string;
+        score: number;
+        metadata?: Record<string, any>;
+    }>>;
+
+    /**
+     * Elimina un vector de la base de datos vectorial
+     * @param key Identificador del vector a eliminar
+     */
+    deleteVector(key: string): Promise<void>;
+
+    /**
+     * Actualiza los metadatos de un vector existente
+     * @param key Identificador del vector
+     * @param metadata Nuevos metadatos
+     */
+    updateVectorMetadata(key: string, metadata: Record<string, any>): Promise<void>;
 } 

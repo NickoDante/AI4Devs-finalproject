@@ -7,6 +7,7 @@ import { PDFAdapter } from '../../adapters/pdf/PDFAdapter';
 import { ProcessMessageUseCase } from '../../application/use-cases/message/ProcessMessageUseCase';
 import { ProcessSummaryUseCase } from '../../application/use-cases/summary/ProcessSummaryUseCase';
 import { ProcessFeedbackUseCase } from '../../application/use-cases/feedback/ProcessFeedbackUseCase';
+import { ProcessEmbeddingsUseCase } from '../../application/use-cases/embeddings/ProcessEmbeddingsUseCase';
 import { MessagePort } from '../../domain/ports/MessagePort';
 import { AIAdapter } from '../../domain/ports/AIAdapter';
 import { PersistencePort } from '../../domain/ports/PersistencePort';
@@ -43,6 +44,7 @@ export class DependencyContainer {
         processMessage: ProcessMessageUseCase;
         processSummary: ProcessSummaryUseCase;
         processFeedback: ProcessFeedbackUseCase;
+        processEmbeddings: ProcessEmbeddingsUseCase;
     };
 
     private constructor() {
@@ -59,7 +61,8 @@ export class DependencyContainer {
         this.useCases = {
             processMessage: {} as ProcessMessageUseCase,
             processSummary: {} as ProcessSummaryUseCase,
-            processFeedback: {} as ProcessFeedbackUseCase
+            processFeedback: {} as ProcessFeedbackUseCase,
+            processEmbeddings: {} as ProcessEmbeddingsUseCase
         };
     }
 
@@ -117,6 +120,12 @@ export class DependencyContainer {
 
             this.useCases.processFeedback = new ProcessFeedbackUseCase(
                 this.services.persistence,
+                this.services.logger
+            );
+
+            this.useCases.processEmbeddings = new ProcessEmbeddingsUseCase(
+                this.services.ai,
+                this.services.cache,
                 this.services.logger
             );
 
@@ -198,6 +207,10 @@ export class DependencyContainer {
 
     getProcessFeedbackUseCase(): ProcessFeedbackUseCase {
         return this.useCases.processFeedback;
+    }
+
+    getProcessEmbeddingsUseCase(): ProcessEmbeddingsUseCase {
+        return this.useCases.processEmbeddings;
     }
 }
 

@@ -34,6 +34,7 @@ export class LlamaAdapter implements AIAdapter {
   private readonly MODEL_PATH = process.env.LLAMA_MODEL_PATH || 
     path.join(process.cwd(), 'models', 'mistral-7b-instruct-v0.2.Q4_K_M.gguf');
   private readonly logger: Logger;
+  private llamaInstance: any = null;
 
   constructor(loggerInstance?: Logger) {
     this.logger = loggerInstance || logger;
@@ -231,5 +232,75 @@ export class LlamaAdapter implements AIAdapter {
     this.logger.info('🧹 Limpiando contexto de conversación');
     this.contextMessages = [];
     // No necesitamos hacer nada más, ya que creamos una nueva sesión cada vez
+  }
+
+  /**
+   * Inicializa el modelo Llama si aún no está inicializado
+   */
+  private async initializeLlama(): Promise<any> {
+    if (!this.llamaInstance) {
+      try {
+        const llamaModule = await import('node-llama-cpp');
+        const llama = await llamaModule.getLlama();
+        this.llamaInstance = await llama.loadModel({
+          modelPath: this.MODEL_PATH,
+          contextSize: 4096,
+          gpuLayers: Number(process.env.LLAMA_GPU_LAYERS || 0)
+        } as any);
+        this.logger.info('✅ Modelo Llama inicializado correctamente');
+      } catch (error) {
+        this.logger.error('❌ Error al inicializar Llama:', error);
+        throw error;
+      }
+    }
+    return this.llamaInstance;
+  }
+
+  /**
+   * Genera embeddings para un texto dado
+   */
+  async generateEmbeddings(text: string): Promise<number[]> {
+    try {
+      const model = await this.initializeLlama();
+      const context = await model.createContext();
+      
+      // Usar el modelo para generar embeddings
+      const embeddings = await context.getEmbeddings(text);
+      
+      this.logger.debug('Embeddings generados correctamente', {
+        textLength: text.length,
+        embeddingsLength: embeddings.length
+      });
+      
+      return embeddings;
+    } catch (error) {
+      this.logger.error('❌ Error al generar embeddings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Genera embeddings para múltiples textos en batch
+   */
+  async generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
+    try {
+      const model = await this.initializeLlama();
+      const context = await model.createContext();
+      
+      // Procesar textos en batch
+      const embeddings = await Promise.all(
+        texts.map(text => context.getEmbeddings(text))
+      );
+      
+      this.logger.debug('Embeddings batch generados correctamente', {
+        textsCount: texts.length,
+        embeddingsCount: embeddings.length
+      });
+      
+      return embeddings;
+    } catch (error) {
+      this.logger.error('❌ Error al generar embeddings batch:', error);
+      throw error;
+    }
   }
 } 

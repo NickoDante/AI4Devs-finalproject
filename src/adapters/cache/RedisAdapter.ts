@@ -7,11 +7,17 @@ export class RedisAdapter implements CachePort {
     private readonly keyPrefix = 'tg:'; // Prefijo para todas las claves
     private readonly contextNamespace = 'context'; // Namespace para contextos de conversación
     private readonly activeConvsNamespace = 'activeConvs'; // Namespace para conversaciones activas
+    private readonly vectorNamespace = 'vectors'; // Namespace para vectores
+    private readonly vectorIndexName = 'tg_vector_idx'; // Nombre del índice vectorial
 
     constructor(
         private redis: Redis,
         private logger: Logger
-    ) {}
+    ) {
+        this.initializeVectorIndex().catch(error => {
+            this.logger.error('Error al inicializar índice vectorial:', error);
+        });
+    }
 
     private getFullKey(key: string, namespace?: string): string {
         return `${this.keyPrefix}${namespace ? `${namespace}:` : ''}${key}`;
@@ -289,5 +295,135 @@ export class RedisAdapter implements CachePort {
             0, // Eliminar todas las ocurrencias
             conversationId
         );
+    }
+
+    /**
+     * Inicializa el índice vectorial en Redis si no existe
+     */
+    private async initializeVectorIndex(): Promise<void> {
+        try {
+            // Verificar si el índice ya existe
+            const indexExists = await this.redis.call('FT.INFO', this.vectorIndexName).catch(() => false);
+            
+            if (!indexExists) {
+                // Crear índice vectorial
+                await this.redis.call(
+                    'FT.CREATE', this.vectorIndexName,
+                    'ON', 'HASH',
+                    'PREFIX', '1', `${this.keyPrefix}${this.vectorNamespace}:`,
+                    'SCHEMA',
+                    'vector', 'VECTOR', 'HNSW', '6', 'TYPE', 'FLOAT32', 'DIM', '384', 'DISTANCE_METRIC', 'COSINE',
+                    'metadata', 'TEXT'
+                );
+                
+                this.logger.info('✅ Índice vectorial creado correctamente');
+            } else {
+                this.logger.info('✅ Índice vectorial ya existe');
+            }
+        } catch (error) {
+            this.logger.error('❌ Error al crear índice vectorial:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Guarda un vector en la base de datos vectorial
+     */
+    async storeVector(key: string, vector: number[], metadata?: Record<string, any>): Promise<void> {
+        try {
+            const fullKey = this.getFullKey(key, this.vectorNamespace);
+            const serializedMetadata = metadata ? JSON.stringify(metadata) : '';
+            
+            await this.redis.hset(fullKey, {
+                vector: Buffer.from(new Float32Array(vector).buffer),
+                metadata: serializedMetadata
+            });
+            
+            this.logger.debug('Vector almacenado correctamente', {
+                key: fullKey,
+                vectorLength: vector.length,
+                hasMetadata: !!metadata
+            });
+        } catch (error) {
+            this.logger.error('❌ Error al almacenar vector:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Busca los vectores más similares a un vector dado
+     */
+    async searchSimilarVectors(vector: number[], limit: number = 5, threshold: number = 0.7): Promise<Array<{
+        key: string;
+        score: number;
+        metadata?: Record<string, any>;
+    }>> {
+        try {
+            const vectorBlob = Buffer.from(new Float32Array(vector).buffer);
+            
+            // Realizar búsqueda KNN
+            const results = await this.redis.call(
+                'FT.SEARCH', this.vectorIndexName,
+                '*=>[KNN $K @vector $BLOB AS score]',
+                'PARAMS', '2', 'K', limit.toString(), 'BLOB', vectorBlob.toString('base64'),
+                'RETURN', '3', 'score', 'metadata', '__key',
+                'SORTBY', 'score',
+                'LIMIT', '0', limit.toString()
+            ) as any[];
+
+            // Procesar resultados
+            return results.slice(1).map(result => {
+                const [key, , scoreStr, , metadataStr] = result;
+                const score = parseFloat(scoreStr);
+                
+                // Solo incluir resultados que superen el umbral
+                if (score >= threshold) {
+                    return {
+                        key: key.replace(`${this.keyPrefix}${this.vectorNamespace}:`, ''),
+                        score,
+                        metadata: metadataStr ? JSON.parse(metadataStr) : undefined
+                    };
+                }
+                return null;
+            }).filter(result => result !== null);
+        } catch (error) {
+            this.logger.error('❌ Error en búsqueda vectorial:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Elimina un vector de la base de datos vectorial
+     */
+    async deleteVector(key: string): Promise<void> {
+        try {
+            const fullKey = this.getFullKey(key, this.vectorNamespace);
+            await this.redis.del(fullKey);
+            
+            this.logger.debug('Vector eliminado correctamente', { key: fullKey });
+        } catch (error) {
+            this.logger.error('❌ Error al eliminar vector:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Actualiza los metadatos de un vector existente
+     */
+    async updateVectorMetadata(key: string, metadata: Record<string, any>): Promise<void> {
+        try {
+            const fullKey = this.getFullKey(key, this.vectorNamespace);
+            const serializedMetadata = JSON.stringify(metadata);
+            
+            await this.redis.hset(fullKey, 'metadata', serializedMetadata);
+            
+            this.logger.debug('Metadatos de vector actualizados', {
+                key: fullKey,
+                metadata: Object.keys(metadata)
+            });
+        } catch (error) {
+            this.logger.error('❌ Error al actualizar metadatos del vector:', error);
+            throw error;
+        }
     }
 } 

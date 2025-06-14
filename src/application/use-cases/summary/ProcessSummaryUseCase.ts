@@ -48,6 +48,13 @@ export class ProcessSummaryUseCase {
         options
       });
 
+      // Detectar idioma basado en el mensaje y metadata
+      const language = this.detectLanguage(message, options?.language);
+      const finalOptions = {
+        ...options,
+        language
+      };
+
       // Generar clave de caché
       const cacheKey = this.generateCacheKey(summaryRequest);
       
@@ -55,7 +62,7 @@ export class ProcessSummaryUseCase {
       const cachedResult = await this.getCachedSummary(cacheKey);
       if (cachedResult) {
         this.logger.info('Resumen encontrado en caché');
-        return cachedResult;
+        return this.translateCachedResponse(cachedResult, language);
       }
 
       // Extraer contenido según el tipo
@@ -105,11 +112,11 @@ export class ProcessSummaryUseCase {
       }
 
       // Generar resumen usando IA
-      const summary = await this.generateSummary(extractedContent, options);
+      const summary = await this.generateSummary(extractedContent, finalOptions);
 
       // Crear respuesta
       const response: BotResponse = {
-        content: this.formatSummaryResponse(summary, metadata, summaryRequest.type, options),
+        content: this.formatSummaryResponse(summary, metadata, summaryRequest.type, finalOptions),
         type: 'text',
         metadata: {
           source: this.getSourceDescription(summaryRequest.type, metadata),
@@ -117,7 +124,8 @@ export class ProcessSummaryUseCase {
           processingTime: Date.now() - startTime,
           documentType: summaryRequest.type,
           originalLength: extractedContent.length,
-          summaryLength: summary.length
+          summaryLength: summary.length,
+          language
         }
       };
 
@@ -322,24 +330,32 @@ export class ProcessSummaryUseCase {
 
   private buildSummaryPrompt(content: string, maxLength: number, language: string, format: string): string {
     const languageInstructions = language === 'en' 
-      ? 'Respond in English' 
-      : 'Responde en español';
+      ? 'You are TG-TheGuardian, an AI assistant with a friendly and professional personality. Respond in English.' 
+      : 'Eres TG-TheGuardian, un asistente de IA con personalidad amigable y profesional. Responde en español.';
 
     const formatInstructions = {
       'structured': language === 'en' 
-        ? 'Use a structured format with clear sections and bullet points'
-        : 'Usa un formato estructurado con secciones claras y puntos clave',
+        ? 'Create a concise and engaging summary that captures the key points and main message of the document. Focus on what\'s most relevant and impactful.'
+        : 'Crea un resumen conciso y atractivo que capture los puntos clave y el mensaje principal del documento. Enfócate en lo más relevante e impactante.',
       'paragraph': language === 'en'
-        ? 'Write in paragraph format, flowing naturally'
-        : 'Escribe en formato de párrafos, de manera fluida',
+        ? 'Write a fluid and engaging summary that tells the story of the document in a natural way. Focus on the main narrative and key takeaways.'
+        : 'Escribe un resumen fluido y atractivo que cuente la historia del documento de manera natural. Enfócate en la narrativa principal y las conclusiones clave.',
       'bullet_points': language === 'en'
-        ? 'Use only bullet points to summarize key information'
-        : 'Usa solo puntos clave para resumir la información importante'
+        ? 'Extract and present the most important information in clear, impactful bullet points. Focus on actionable insights and key findings.'
+        : 'Extrae y presenta la información más importante en puntos clave claros e impactantes. Enfócate en conclusiones accionables y hallazgos clave.'
     };
 
-    return `${languageInstructions}. ${formatInstructions[format as keyof typeof formatInstructions]}.
+    const personalityInstructions = language === 'en'
+      ? 'Use a professional yet friendly tone. Be clear and direct, but maintain an engaging style that makes the information accessible and interesting.'
+      : 'Usa un tono profesional pero amigable. Sé claro y directo, pero mantén un estilo atractivo que haga la información accesible e interesante.';
 
-Genera un resumen conciso del siguiente documento en máximo ${maxLength} palabras. Identifica los puntos más importantes y presenta la información de manera clara y útil:
+    return `${languageInstructions}
+
+${personalityInstructions}
+
+${formatInstructions[format as keyof typeof formatInstructions]}
+
+Generate a summary of the following document in no more than ${maxLength} words:
 
 ${content.substring(0, 4000)} ${content.length > 4000 ? '...' : ''}`;
   }
@@ -465,5 +481,93 @@ ${content.substring(0, 4000)} ${content.length > 4000 ? '...' : ''}`;
       this.logger.error('Error extrayendo ID de página de Confluence:', error);
       return null;
     }
+  }
+
+  private detectLanguage(message: Message, defaultLanguage?: string): 'es' | 'en' {
+    // Si se especificó un idioma en las opciones, usarlo
+    if (defaultLanguage) {
+      return defaultLanguage as 'es' | 'en';
+    }
+
+    // Detectar por metadata del mensaje
+    if (message.metadata?.requestedLanguage) {
+      return message.metadata.requestedLanguage as 'es' | 'en';
+    }
+
+    // Detectar por el comando usado
+    if (message.metadata?.command === 'summary') {
+      const content = message.content?.toLowerCase() || '';
+      if (content.includes('summary') || content.includes('resume')) {
+        return 'en';
+      }
+      if (content.includes('resumen')) {
+        return 'es';
+      }
+    }
+
+    // Por defecto, español
+    return 'es';
+  }
+
+  private translateCachedResponse(response: BotResponse, targetLanguage: 'es' | 'en'): BotResponse {
+    // Si el idioma coincide, devolver tal cual
+    if (response.metadata?.language === targetLanguage) {
+      return response;
+    }
+
+    // Traducir los encabezados según el idioma
+    const headers = {
+      'es': {
+        webPage: '🌐 Página Web',
+        pdfDoc: '📄 Documento PDF',
+        docInfo: '📊 Información del documento',
+        pages: 'Páginas',
+        author: 'Autor',
+        size: 'Tamaño',
+        url: 'URL'
+      },
+      'en': {
+        webPage: '🌐 Web Page',
+        pdfDoc: '📄 PDF Document',
+        docInfo: '📊 Document Information',
+        pages: 'Pages',
+        author: 'Author',
+        size: 'Size',
+        url: 'URL'
+      }
+    };
+
+    const h = headers[targetLanguage];
+    let content = response.content;
+
+    // Traducir encabezados
+    if (targetLanguage === 'en') {
+      content = content
+        .replace(/🌐 Página Web/g, h.webPage)
+        .replace(/📄 Documento PDF/g, h.pdfDoc)
+        .replace(/📊 Información del documento/g, h.docInfo)
+        .replace(/• Páginas:/g, `• ${h.pages}:`)
+        .replace(/• Autor:/g, `• ${h.author}:`)
+        .replace(/• Tamaño:/g, `• ${h.size}:`)
+        .replace(/• URL:/g, `• ${h.url}:`);
+    } else {
+      content = content
+        .replace(/🌐 Web Page/g, h.webPage)
+        .replace(/📄 PDF Document/g, h.pdfDoc)
+        .replace(/📊 Document Information/g, h.docInfo)
+        .replace(/• Pages:/g, `• ${h.pages}:`)
+        .replace(/• Author:/g, `• ${h.author}:`)
+        .replace(/• Size:/g, `• ${h.size}:`)
+        .replace(/• URL:/g, `• ${h.url}:`);
+    }
+
+    return {
+      ...response,
+      content,
+      metadata: {
+        ...response.metadata,
+        language: targetLanguage
+      }
+    };
   }
 } 
